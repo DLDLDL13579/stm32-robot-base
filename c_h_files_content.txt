@@ -1,0 +1,2755 @@
+文件名: bsp.c
+文件路径: C:\ros2_car\CarMove_IIC\BSP\bsp.c
+文件内容:
+#include "bsp.h"
+
+void bsp_init(void)
+{
+	
+	DIY_NVIC_PriorityGroupConfig(2);	  //设置中断分组   //Set interrupt grouping
+	delay_init();	    	            //延时函数初始化	 //Delay function initialization
+	JTAG_Set(JTAG_SWD_DISABLE);     //关闭JTAG接口    //Close JTAG interface
+	JTAG_Set(SWD_ENABLE);           //打开SWD接口 可以利用主板的SWD接口调试 //Opening the SWD interface allows for debugging using the motherboard's SWD interface
+	uart_init(115200);
+
+}
+
+
+void JTAG_Set(u8 mode)
+{
+	u32 temp;
+	temp=mode;
+	temp<<=25;
+	RCC->APB2ENR|=1<<0;     //开启辅助时钟	  Activate auxiliary clock  
+	AFIO->MAPR&=0XF8FFFFFF; //清除MAPR的[26:24] Clear MAPR [26:24]
+	AFIO->MAPR|=temp;       //设置jtag模式 Set jtag mode
+} 
+
+
+/**************************************************************************
+Function: Set NVIC group
+Input   : NVIC_Group
+Output  : none
+函数功能：设置中断分组
+入口参数：NVIC_Group:NVIC分组 0~4 总共5组 	
+返回  值：无
+**************************************************************************/ 
+void DIY_NVIC_PriorityGroupConfig(u8 NVIC_Group)	 
+{ 
+	u32 temp,temp1;	  
+	temp1=(~NVIC_Group)&0x07;//取后三位 Take the last three
+	temp1<<=8;
+	temp=SCB->AIRCR;  //读取先前的设置  Read previous settings
+	temp&=0X0000F8FF; //清空先前分组   Clear previous groups
+	temp|=0X05FA0000; //写入钥匙  Write the key
+	temp|=temp1;	   
+	SCB->AIRCR=temp;  //设置分组	  Set grouping   	  				   
+}
+
+
+==================================================
+
+文件名: bsp.h
+文件路径: C:\ros2_car\CarMove_IIC\BSP\bsp.h
+文件内容:
+#ifndef __BSP_H_
+#define __BSP_H_
+
+#include "ALLHeader.h"
+
+
+void bsp_init(void);
+void JTAG_Set(u8 mode);
+void DIY_NVIC_PriorityGroupConfig(u8 NVIC_Group);
+
+#endif
+
+
+==================================================
+
+文件名: delay.c
+文件路径: C:\ros2_car\CarMove_IIC\BSP\Delay\delay.c
+文件内容:
+#include "delay.h"
+
+
+static uint8_t fac_us = 0;  //us延时倍乘数
+static uint16_t fac_ms = 0; //ms延时倍乘数
+
+void delay_init(void)
+{
+	uint8_t SYSCLK = SystemCoreClock / 1000000;
+	SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK_Div8); // 选择外部时钟  HCLK/8
+	fac_us = SYSCLK / 8;
+	fac_ms = (uint16_t)fac_us * 1000;
+}
+
+
+/**********************************************************
+** 函数名: delay_ms
+** 功能描述: 延时nms
+** 输入参数: nms
+** 输出参数: 无
+** 说明：SysTick->LOAD为24位寄存器,所以,最大延时为:
+		nms<=0xffffff*8*1000/SYSCLK
+		SYSCLK单位为Hz,nms单位为ms
+		对72M条件下,nms<=1864 
+***********************************************************/
+void delay_ms(uint16_t nms)
+{
+	uint32_t temp;
+	SysTick->LOAD = (uint32_t)nms * fac_ms; //时间加载(SysTick->LOAD为24bit)
+	SysTick->VAL = 0x00;			   //清空计数器
+	SysTick->CTRL = 0x01;			   //开始倒数
+	do
+	{
+		temp = SysTick->CTRL;
+	} while (temp & 0x01 && !(temp & (1 << 16))); //等待时间到达
+	SysTick->CTRL = 0x00;						  //关闭计数器
+	SysTick->VAL = 0X00;						  //清空计数器
+}
+
+/**********************************************************
+** 函数名: delay_us
+** 功能描述: 延时nus，nus为要延时的us数.
+** 输入参数: nus
+** 输出参数: 无
+***********************************************************/
+void delay_us(uint32_t nus)
+{
+	uint32_t temp;
+	SysTick->LOAD = nus * fac_us; //时间加载
+	SysTick->VAL = 0x00;		  //清空计数器
+	SysTick->CTRL = 0x01;		  //开始倒数
+	do
+	{
+		temp = SysTick->CTRL;
+	} while (temp & 0x01 && !(temp & (1 << 16))); //等待时间到达
+	SysTick->CTRL = 0x00;						  //关闭计数器
+	SysTick->VAL = 0X00;						  //清空计数器
+}
+
+
+
+
+
+==================================================
+
+文件名: delay.h
+文件路径: C:\ros2_car\CarMove_IIC\BSP\Delay\delay.h
+文件内容:
+#ifndef __DELAY_H
+#define __DELAY_H
+
+#include "stm32f10x.h"
+#include "system_stm32f10x.h"
+
+void delay_init(void);
+void delay_ms(uint16_t nms);
+void delay_us(uint32_t nus);
+
+
+#endif
+
+
+==================================================
+
+文件名: bsp_motor_iic.c
+文件路径: C:\ros2_car\CarMove_IIC\BSP\motor_model\bsp_motor_iic.c
+文件内容:
+【无法读取文件内容，错误：'gbk' codec can't decode byte 0xae in position 3179: illegal multibyte sequence】
+==================================================
+
+文件名: bsp_motor_iic.h
+文件路径: C:\ros2_car\CarMove_IIC\BSP\motor_model\bsp_motor_iic.h
+文件内容:
+#ifndef __BSP_MOTOR_IIC_H_
+#define __BSP_MOTOR_IIC_H_
+
+#include "AllHeader.h"
+
+#define Motor_model_ADDR    0x26
+
+
+typedef enum __Motor_IIC_ADDR_
+{
+	//Wirte Reg
+	MOTOR_TYPE_REG = 0x01, //电机类型	Motor Type
+	MOTOR_DeadZONE_REG = 0x02, //死区配置	Dead zone configuration
+	MOTOR_PluseLine_REG = 0x03, //磁环线数	Magnetic loop number
+	MOTOR_PlusePhase_REG = 0x04, //减速比	Reduction ratio
+	WHEEL_DIA_REG = 0x05, //轮子直径	Wheel diameter
+	SPEED_Control_REG = 0x06, //速度控制	Speed control
+	PWM_Control_REG = 0x07, //pwm控制	PWM control
+	
+	
+	//Read Reg
+	READ_TEN_M1Enconer_REG = 0x10, //10ms实时编码器读取M1	10ms real-time encoder reading M1
+	READ_TEN_M2Enconer_REG = 0x11, //10ms实时编码器读取M2	10ms real-time encoder reading M2
+	READ_TEN_M3Enconer_REG = 0x12, //10ms实时编码器读取M3	10ms real-time encoder reading M3
+	READ_TEN_M4Enconer_REG = 0x13, //10ms实时编码器读取M4	10ms real-time encoder reading M4
+	
+	READ_ALLHigh_M1_REG = 0x20, //读取M1总的脉冲数 高位	Read the total number of pulses of M1 High
+	READ_ALLLOW_M1_REG = 0x21, //读取M1总的脉冲数 低位	Read the total number of pulses of M1 low
+	
+	READ_ALLHigh_M2_REG = 0x22, //读取M2总的脉冲数 高位	Read the total number of pulses of M2 High
+	READ_ALLLOW_M2_REG = 0x23,  //读取M2总的脉冲数 低位	Read the total number of pulses of M2 low
+	
+	READ_ALLHigh_M3_REG = 0x24, //读取M3总的脉冲数 高位	Read the total number of pulses of M3 High
+	READ_ALLLOW_M3_REG = 0x25, //读取M3总的脉冲数 低位	Read the total number of pulses of M3 low
+	
+	READ_ALLHigh_M4_REG = 0x26, //读取M4总的脉冲数 高位	Read the total number of pulses of M4 High
+	READ_ALLLOW_M4_REG = 0x27, //读取M4总的脉冲数 低位	Read the total number of pulses of M4 low
+	
+	IIC_REG_MAX //最大的	The largest
+	
+
+}Motor_IIC_ADDR_t;
+
+
+//引出编码器变量，供外部使用	Lead out encoder variables for external use
+extern int Encoder_Offset[4];
+extern int Encoder_Now[4];
+
+
+
+void IIC_Motor_Init(void);
+void control_speed(int16_t m1,int16_t m2 ,int16_t m3,int16_t m4);
+void control_pwm(int16_t m1,int16_t m2 ,int16_t m3,int16_t m4);
+void Set_motor_type(uint8_t data);
+void Read_10_Enconder(void);
+void Read_ALL_Enconder(void);
+void Set_motor_deadzone(uint16_t data);
+void Set_Pluse_line(uint16_t data);
+void Set_Pluse_Phase(uint16_t data);
+void Set_Wheel_dis(float data);
+
+#endif
+
+==================================================
+
+文件名: IOI2C.c
+文件路径: C:\ros2_car\CarMove_IIC\BSP\motor_model\IOI2C.c
+文件内容:
+【无法读取文件内容，错误：'gbk' codec can't decode byte 0xb0 in position 6124: illegal multibyte sequence】
+==================================================
+
+文件名: IOI2C.h
+文件路径: C:\ros2_car\CarMove_IIC\BSP\motor_model\IOI2C.h
+文件内容:
+#ifndef __IOI2C_H
+#define __IOI2C_H
+
+#include "AllHeader.h"
+
+//IO方向设置	IO direction setting
+#define SDA_IN()  {GPIOB->CRH&=0XFFFF0FFF;GPIOB->CRH|=8<<12;}
+#define SDA_OUT() {GPIOB->CRH&=0XFFFF0FFF;GPIOB->CRH|=3<<12;}
+
+//IO操作函数	 IO operation function
+#define IIC_SCL    PBout(10) //SCL
+#define IIC_SDA    PBout(11) //SDA	 
+#define READ_SDA   PBin(11)  //输入SDA 	Input SDA
+
+
+//IIC所有操作函数	IIC all operation functions
+int IIC_Start(void);				//发送IIC开始信号	Send IIC start signal
+void IIC_Stop(void);	  			//发送IIC停止信号	Send IIC stop signal
+void IIC_Send_Byte(u8 txd);			//IIC发送一个字节	IIC sends a byte
+u8 IIC_Read_Byte(unsigned char ack);//IIC读取一个字节	IIC reads a byte
+int IIC_Wait_Ack(void); 			//IIC等待ACK信号		IIC waits for ACK signal
+void IIC_Ack(void);					//IIC发送ACK信号		IIC sends ACK signal
+void IIC_NAck(void);				//IIC不发送ACK信号	IIC does not send ACK signal
+
+int i2cWrite(uint8_t addr, uint8_t reg, uint8_t len, uint8_t *data);
+int i2cRead(uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf);
+
+#endif
+
+//------------------End of File----------------------------
+
+==================================================
+
+文件名: bsp_timer.c
+文件路径: C:\ros2_car\CarMove_IIC\BSP\Timer\bsp_timer.c
+文件内容:
+【无法读取文件内容，错误：'gbk' codec can't decode byte 0xad in position 1935: illegal multibyte sequence】
+==================================================
+
+文件名: bsp_timer.h
+文件路径: C:\ros2_car\CarMove_IIC\BSP\Timer\bsp_timer.h
+文件内容:
+#ifndef __BSP_TIMER_H__
+#define __BSP_TIMER_H__
+
+#include "AllHeader.h"
+
+
+void TIM6_Init(void);
+void TIM7_Init(void);
+void TIM3_Init(void);
+
+void power_decect(void);
+void cotrol_led(void);
+
+void delay_time(u16 time);
+void my_delay(u16 s);
+
+
+#endif
+
+==================================================
+
+文件名: usart.c
+文件路径: C:\ros2_car\CarMove_IIC\BSP\Usart1\usart.c
+文件内容:
+#include "usart.h"	  
+
+//////////////////////////////////////////////////////////////////
+//加入以下代码,支持printf函数,而不需要选择use MicroLIB	  
+#if 1
+#pragma import(__use_no_semihosting)             
+//标准库需要的支持函数                 
+struct __FILE 
+{ 
+	int handle; 
+}; 
+
+FILE __stdout;       
+//定义_sys_exit()以避免使用半主机模式    
+void _sys_exit(int x) 
+{ 
+	x = x; 
+} 
+//重定义fputc函数 
+int fputc(int ch, FILE *f)
+{      
+	  while((USART1->SR&0X40)==0);
+		USART1->DR = (u8) ch;      
+	return ch;
+}
+#endif 
+/**************************************************************************
+Function: Serial port 1 initialization
+Input   : bound：Baud rate
+Output  : none
+函数功能：串口1初始化
+入口参数：bound：波特率
+返回  值：无
+**************************************************************************/
+void uart_init(u32 bound)
+{
+  //GPIO端口设置	GPIO port settings
+	GPIO_InitTypeDef GPIO_InitStructure;
+	USART_InitTypeDef USART_InitStructure;
+	NVIC_InitTypeDef NVIC_InitStructure; 
+	
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1|RCC_APB2Periph_GPIOA, ENABLE);	//使能USART1，GPIOA时钟	Enable USART1, GPIOA clock
+  
+	//USART1_TX   GPIOA.9
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9; //PA.9
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;	//复用推挽输出	Multiplexed push-pull output
+	GPIO_Init(GPIOA, &GPIO_InitStructure);//初始化GPIOA.9	Initialize GPIOA.9
+   
+	//USART1_RX	  GPIOA.10初始化	GPIOA.10 Initialization
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;//PA10
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;//浮空输入	Floating Input
+	GPIO_Init(GPIOA, &GPIO_InitStructure);//初始化GPIOA.10  Initialize GPIOA.10
+	//USART 初始化设置	USART initialization settings
+	USART_InitStructure.USART_BaudRate = bound;//串口波特率	Serial port baud rate
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;//字长为8位数据格式	The word length is 8-bit data format
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;//一个停止位	One stop bit
+	USART_InitStructure.USART_Parity = USART_Parity_No;//无奇偶校验位	No parity bit
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;//无硬件数据流控制	No hardware flow control
+	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;	//收发模式	Transceiver mode
+
+	USART_Init(USART1, &USART_InitStructure); //初始化串口1	Initialize serial port 1
+	USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);  //关闭串口接受中断	Disable serial port receive interrupt
+	USART_Cmd(USART1, ENABLE);                    //使能串口1 	Enable serial port 1
+	
+	NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+}
+
+/**
+ * @Brief: UART1发送数据	UART1 sends data
+ * @Note: 
+ * @Parm: ch:待发送的数据 	ch:Data to be sent
+ * @Retval: 
+ */
+void USART1_Send_U8(uint8_t ch)
+{
+	while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET)
+		;
+	USART_SendData(USART1, ch);
+}
+
+/**
+ * @Brief: UART1发送数据	UART1 sends data
+ * @Note: 
+ * @Parm: BufferPtr:待发送的数据  Length:数据长度		BufferPtr: data to be sent Length: data length
+ * @Retval: 
+ */
+void USART1_Send_ArrayU8(uint8_t *BufferPtr, uint16_t Length)
+{
+	while (Length--)
+	{
+		USART1_Send_U8(*BufferPtr);
+		BufferPtr++;
+	}
+}
+/*
+//串口中断服务函数	Serial port interrupt service function
+void USART1_IRQHandler(void)
+{
+	uint8_t Rx1_Temp = 0;
+	if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
+	{
+		Rx1_Temp = USART_ReceiveData(USART1);
+		USART1_Send_U8(Rx1_Temp);
+	}
+}
+*/
+
+
+==================================================
+
+文件名: usart.h
+文件路径: C:\ros2_car\CarMove_IIC\BSP\Usart1\usart.h
+文件内容:
+#ifndef __USART_H
+#define __USART_H
+#include "AllHeader.h"
+
+
+
+void uart_init(u32 bound);
+void USART1_Send_U8(uint8_t ch);
+void USART1_Send_ArrayU8(uint8_t *BufferPtr, uint16_t Length);
+#endif
+
+
+
+==================================================
+
+文件名: AllHeader.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\AllHeader.h
+文件内容:
+/**
+* @par Copyright (C): 2016-2026, Shenzhen Yahboom Tech
+* @file         // ALLHeader.h
+* @author       // lly
+* @version      // V1.0
+* @date         // 240628
+* @brief        // 相关所有的头文件
+* @details      
+* @par History  //
+*               
+*/
+
+
+#ifndef __ALLHEADER_H
+#define __ALLHEADER_H
+
+
+//头文件
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+extern uint8_t times;
+
+#include "stm32f10x.h"
+#include "stm32f10x_gpio.h"
+
+#include "myenum.h"
+
+#include "delay.h"
+#include "bsp.h"
+#include "usart.h"
+#include "IOI2C.h"
+#include "bsp_motor_iic.h"
+#include "bsp_hard_i2c.h"
+#include "bsp_usart.h"
+
+#include "mpu6050.h"     // MPU6050椹卞姩
+#include "bsp_timer.h"
+void Car_Move(void);
+
+
+
+#endif
+
+
+
+==================================================
+
+文件名: bsp_hard_i2c.c
+文件路径: C:\ros2_car\CarMove_IIC\USER\bsp_hard_i2c.c
+文件内容:
+#include "bsp_hard_i2c.h"
+#include "mpu6050.h"
+#include "bsp_usart.h"
+
+// 删除或注释掉这行
+// #include "./led/bsp_led.h"
+
+void WaitEvent(I2C_TypeDef* I2Cx, uint32_t I2C_EVENT);
+
+// I2C配置函数
+void MPU_I2C_Config(void)
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+    I2C_InitTypeDef I2C_InitStructure;
+    
+    RCC_APB2PeriphClockCmd(RCC_HARD_GPIO_PORT, ENABLE);
+    RCC_APB1PeriphClockCmd(RCC_HARD_I2C_PORT, ENABLE);
+    
+    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_OD;
+    GPIO_InitStructure.GPIO_Pin   = I2C_SCL_PIN | I2C_SDA_PIN;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(I2C_GPIO_PORT, &GPIO_InitStructure);
+    
+    I2C_DeInit(MPU_I2C);
+    
+    I2C_InitStructure.I2C_Ack                   = I2C_Ack_Enable;
+    I2C_InitStructure.I2C_AcknowledgedAddress   = I2C_AcknowledgedAddress_7bit;
+    I2C_InitStructure.I2C_ClockSpeed            = 400000;
+    I2C_InitStructure.I2C_DutyCycle             = I2C_DutyCycle_2;
+    I2C_InitStructure.I2C_Mode                  = I2C_Mode_I2C;
+    I2C_InitStructure.I2C_OwnAddress1           = I2Cx_OWN_ADDRESS7;
+    I2C_Init(MPU_I2C, &I2C_InitStructure);
+    I2C_Cmd(MPU_I2C, ENABLE);
+}
+
+// 字节写函数
+void I2C_ByteWrite(uint8_t pBuffer, uint8_t WriteAddr)
+{
+    while(I2C_GetFlagStatus(MPU_I2C, I2C_FLAG_BUSY));
+    I2C_GenerateSTART(MPU_I2C, ENABLE);
+    while(I2C_CheckEvent(MPU_I2C, I2C_EVENT_MASTER_MODE_SELECT) == ERROR);
+    
+    I2C_Send7bitAddress(MPU_I2C, MPU6050_SLAVE_ADDRESS, I2C_Direction_Transmitter);
+    WaitEvent(MPU_I2C, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED);
+    
+    I2C_SendData(MPU_I2C, WriteAddr);
+    WaitEvent(MPU_I2C, I2C_EVENT_MASTER_BYTE_TRANSMITTING);
+    
+    I2C_SendData(MPU_I2C, pBuffer);
+    WaitEvent(MPU_I2C, I2C_EVENT_MASTER_BYTE_TRANSMITTED);
+    
+    I2C_GenerateSTOP(MPU_I2C, ENABLE);
+}
+
+// 缓冲区读函数
+void I2C_BufferRead(uint8_t* pBuffer, uint8_t ReadAddr, uint16_t NumByteToRead)
+{
+    while(I2C_GetFlagStatus(MPU_I2C, I2C_FLAG_BUSY));
+    I2C_GenerateSTART(MPU_I2C, ENABLE);
+    while(I2C_CheckEvent(MPU_I2C, I2C_EVENT_MASTER_MODE_SELECT) == ERROR);
+    
+    I2C_Send7bitAddress(MPU_I2C, MPU6050_SLAVE_ADDRESS, I2C_Direction_Transmitter);
+    while(I2C_CheckEvent(MPU_I2C, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) == ERROR);
+    
+    I2C_SendData(MPU_I2C, ReadAddr);
+    while(I2C_CheckEvent(MPU_I2C, I2C_EVENT_MASTER_BYTE_TRANSMITTED) == ERROR);
+    
+    I2C_GenerateSTART(MPU_I2C, ENABLE);
+    while(I2C_CheckEvent(MPU_I2C, I2C_EVENT_MASTER_MODE_SELECT) == ERROR);
+    
+    I2C_Send7bitAddress(MPU_I2C, MPU6050_SLAVE_ADDRESS, I2C_Direction_Receiver);
+    while(I2C_CheckEvent(MPU_I2C, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED) == ERROR);
+
+    while(NumByteToRead)
+    {
+        if(NumByteToRead == 1)
+        {
+            I2C_AcknowledgeConfig(MPU_I2C, DISABLE);
+            I2C_GenerateSTOP(MPU_I2C, ENABLE);
+        }
+
+        WaitEvent(MPU_I2C, I2C_EVENT_MASTER_BYTE_RECEIVED);
+        {
+            *pBuffer = I2C_ReceiveData(MPU_I2C);
+            pBuffer++;
+            NumByteToRead--;
+        }
+    }
+
+    I2C_AcknowledgeConfig(MPU_I2C, ENABLE);
+}
+
+// 等待事件函数（删除LED相关代码）
+void WaitEvent(I2C_TypeDef* I2Cx, uint32_t I2C_EVENT)
+{
+    uint32_t timecount = 40000;
+    while(I2C_CheckEvent(I2Cx, I2C_EVENT) == ERROR)
+    {
+        timecount--;
+        if(timecount == 0)
+        {
+            // 删除LED1_ON;
+            break;
+        }
+    }
+}
+==================================================
+
+文件名: bsp_hard_i2c.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\bsp_hard_i2c.h
+文件内容:
+#ifndef __BSP_IIC_H
+#define	__BSP_IIC_H
+
+#include "stm32f10x.h"
+
+#define  MPU_I2C    I2C2
+
+    /**I2C2 GPIO Configuration
+    PB10     ------> I2C1_SCL
+    PB11     ------> I2C1_SDA
+    */
+//�궨��IIC��GPIO
+#define  RCC_HARD_GPIO_PORT      RCC_APB2Periph_GPIOB
+#define  RCC_HARD_I2C_PORT       RCC_APB1Periph_I2C2
+#define  I2C_SCL_PIN             GPIO_Pin_6
+#define  I2C_SDA_PIN             GPIO_Pin_7
+#define  I2C_GPIO_PORT           GPIOB
+
+/* �����ַֻҪ��STM32��ҵ�I2C������ַ��һ������ */
+#define I2Cx_OWN_ADDRESS7      0X0A 
+
+
+
+
+void MPU_I2C_Config(void);
+void I2C_ByteWrite(uint8_t pBuffer, uint8_t WriteAddr);                                          
+void I2C_BufferRead(uint8_t* pBuffer, uint8_t ReadAddr, uint16_t NumByteToRead);
+#endif /* __BSP_IIC_H */
+
+==================================================
+
+文件名: bsp_soft_i2c.c
+文件路径: C:\ros2_car\CarMove_IIC\USER\bsp_soft_i2c.c
+文件内容:
+/**
+  ******************************************************************************
+  * @file    bsp_led.c
+  * @author  fire
+  * @version V1.0
+  * @date    2024-xx-xx
+  * @brief   ����IIC ����
+  ******************************************************************************
+  * @attention
+  *
+  * ʵ��ƽ̨:Ұ�� F103 STM32 ���İ� 
+  * ��̳    :http://www.firebbs.cn
+  * �Ա�    :https://fire-stm32.taobao.com
+  *
+  ******************************************************************************
+  */
+
+/*
+	Ӧ��˵����
+	�ڷ���I2C�豸ǰ�����ȵ��� i2c_CheckDevice() ���I2C�豸�Ƿ��������ú���������GPIO
+*/
+
+#include "stm32f10x.h"
+#include "bsp_soft_i2c.h"
+
+
+
+
+
+
+/* �����дSCL��SDA�ĺ꣬�����Ӵ���Ŀ���ֲ�ԺͿ��Ķ��� */
+#if 0	/* �������룺 1 ѡ��GPIO�Ŀ⺯��ʵ��IO��д */
+	#define I2C_SCL_1()  GPIO_SetBits(GPIO_PORT_SOFT_I2C, SOFT_I2C_SCL_PIN)		/* SCL = 1 */
+	#define I2C_SCL_0()  GPIO_ResetBits(GPIO_PORT_SOFT_I2C, SOFT_I2C_SCL_PIN)		/* SCL = 0 */
+	
+	#define I2C_SDA_1()  GPIO_SetBits(GPIO_PORT_SOFT_I2C, SOFT_I2C_SDA_PIN)		/* SDA = 1 */
+	#define I2C_SDA_0()  GPIO_ResetBits(GPIO_PORT_SOFT_I2C, SOFT_I2C_SDA_PIN)		/* SDA = 0 */
+	
+	#define I2C_SDA_READ()  GPIO_ReadInputDataBit(GPIO_PORT_SOFT_I2C, SOFT_I2C_SDA_PIN)	/* ��SDA����״̬ */
+#else	/* �����֧ѡ��ֱ�ӼĴ�������ʵ��IO��д */
+    /*��ע�⣺����д������IAR��߼����Ż�ʱ���ᱻ�����������Ż� */
+	#define I2C_SCL_1()  GPIO_PORT_SOFT_I2C->BSRR = SOFT_I2C_SCL_PIN				/* SCL = 1 */
+	#define I2C_SCL_0()  GPIO_PORT_SOFT_I2C->BRR = SOFT_I2C_SCL_PIN				/* SCL = 0 */
+	
+	#define I2C_SDA_1()  GPIO_PORT_SOFT_I2C->BSRR = SOFT_I2C_SDA_PIN				/* SDA = 1 */
+	#define I2C_SDA_0()  GPIO_PORT_SOFT_I2C->BRR = SOFT_I2C_SDA_PIN				/* SDA = 0 */
+	
+	#define I2C_SDA_READ()  ((GPIO_PORT_SOFT_I2C->IDR & SOFT_I2C_SDA_PIN) != 0)	/* ��SDA����״̬ */
+#endif
+
+void i2c_GPIO_Config(void);
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_Delay
+*	����˵��: I2C����λ�ӳ٣����400KHz
+*	��    �Σ���
+*	�� �� ֵ: ��
+*********************************************************************************************************
+*/
+static void i2c_Delay(void)
+{
+	uint8_t i;
+
+	/*��
+	 	�����ʱ����ͨ��������AX-Pro�߼������ǲ��Եõ��ġ�
+		CPU��Ƶ72MHzʱ�����ڲ�Flash����, MDK���̲��Ż�
+		ѭ������Ϊ10ʱ��SCLƵ�� = 205KHz 
+		ѭ������Ϊ7ʱ��SCLƵ�� = 347KHz�� SCL�ߵ�ƽʱ��1.5us��SCL�͵�ƽʱ��2.87us 
+	 	ѭ������Ϊ5ʱ��SCLƵ�� = 421KHz�� SCL�ߵ�ƽʱ��1.25us��SCL�͵�ƽʱ��2.375us 
+        
+    IAR���̱���Ч�ʸߣ���������Ϊ7
+	*/
+	for (i = 0; i < 10; i++);
+}
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_Start
+*	����˵��: CPU����I2C���������ź�
+*	��    �Σ���
+*	�� �� ֵ: ��
+*********************************************************************************************************
+*/
+void i2c_Start(void)
+{
+	/* ��SCL�ߵ�ƽʱ��SDA����һ�������ر�ʾI2C���������ź� */
+	I2C_SDA_1();
+	I2C_SCL_1();
+	i2c_Delay();
+	I2C_SDA_0();
+	i2c_Delay();
+	I2C_SCL_0();
+	i2c_Delay();
+}
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_Stop
+*	����˵��: CPU����I2C����ֹͣ�ź�
+*	��    �Σ���
+*	�� �� ֵ: ��
+*********************************************************************************************************
+*/
+void i2c_Stop(void)
+{
+	/* ��SCL�ߵ�ƽʱ��SDA����һ�������ر�ʾI2C����ֹͣ�ź� */
+	I2C_SDA_0();
+	I2C_SCL_1();
+	i2c_Delay();
+	I2C_SDA_1();
+}
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_SendByte
+*	����˵��: CPU��I2C�����豸����8bit����
+*	��    �Σ�_ucByte �� �ȴ����͵��ֽ�
+*	�� �� ֵ: ��
+*********************************************************************************************************
+*/
+void i2c_SendByte(uint8_t _ucByte)
+{
+	uint8_t i;
+
+	/* �ȷ����ֽڵĸ�λbit7 */
+	for (i = 0; i < 8; i++)
+	{		
+		if (_ucByte & 0x80)
+		{
+			I2C_SDA_1();
+		}
+		else
+		{
+			I2C_SDA_0();
+		}
+		i2c_Delay();
+		I2C_SCL_1();
+		i2c_Delay();	
+		I2C_SCL_0();
+		if (i == 7)
+		{
+			 I2C_SDA_1(); // �ͷ�����
+		}
+		_ucByte <<= 1;	/* ����һ��bit */
+		i2c_Delay();
+	}
+}
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_ReadByte
+*	����˵��: CPU��I2C�����豸��ȡ8bit����
+*	��    �Σ���
+*	�� �� ֵ: ����������
+*********************************************************************************************************
+*/
+uint8_t i2c_ReadByte(uint8_t ack)
+{
+	uint8_t i;
+	uint8_t value;
+
+	/* ������1��bitΪ���ݵ�bit7 */
+	value = 0;
+	for (i = 0; i < 8; i++)
+	{
+		value <<= 1;
+		I2C_SCL_1();
+		i2c_Delay();
+		if (I2C_SDA_READ())
+		{
+			value++;
+		}
+		I2C_SCL_0();
+		i2c_Delay();
+	}
+	if(ack==0)
+		i2c_NAck();
+	else
+		i2c_Ack();
+	return value;
+}
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_WaitAck
+*	����˵��: CPU����һ��ʱ�ӣ�����ȡ������ACKӦ���ź�
+*	��    �Σ���
+*	�� �� ֵ: ����0��ʾ��ȷӦ��1��ʾ��������Ӧ
+*********************************************************************************************************
+*/
+uint8_t i2c_WaitAck(void)
+{
+	uint8_t re;
+
+	I2C_SDA_1();	/* CPU�ͷ�SDA���� */
+	i2c_Delay();
+	I2C_SCL_1();	/* CPU����SCL = 1, ��ʱ�����᷵��ACKӦ�� */
+	i2c_Delay();
+	if (I2C_SDA_READ())	/* CPU��ȡSDA����״̬ */
+	{
+		re = 1;
+	}
+	else
+	{
+		re = 0;
+	}
+	I2C_SCL_0();
+	i2c_Delay();
+	return re;
+}
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_Ack
+*	����˵��: CPU����һ��ACK�ź�
+*	��    �Σ���
+*	�� �� ֵ: ��
+*********************************************************************************************************
+*/
+void i2c_Ack(void)
+{
+	I2C_SDA_0();	/* CPU����SDA = 0 */
+	i2c_Delay();
+	I2C_SCL_1();	/* CPU����1��ʱ�� */
+	i2c_Delay();
+	I2C_SCL_0();
+	i2c_Delay();
+	I2C_SDA_1();	/* CPU�ͷ�SDA���� */
+}
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_NAck
+*	����˵��: CPU����1��NACK�ź�
+*	��    �Σ���
+*	�� �� ֵ: ��
+*********************************************************************************************************
+*/
+void i2c_NAck(void)
+{
+	I2C_SDA_1();	/* CPU����SDA = 1 */
+	i2c_Delay();
+	I2C_SCL_1();	/* CPU����1��ʱ�� */
+	i2c_Delay();
+	I2C_SCL_0();
+	i2c_Delay();	
+}
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_GPIO_Config
+*	����˵��: ����I2C���ߵ�GPIO������ģ��IO�ķ�ʽʵ��
+*	��    �Σ���
+*	�� �� ֵ: ��
+*********************************************************************************************************
+*/
+void i2c_GPIO_Config(void)
+{   
+    GPIO_InitTypeDef GPIO_InitStructure;
+
+	RCC_APB2PeriphClockCmd(RCC_SOFT_GPIO_PORT, ENABLE);	/* ��GPIOʱ�� */
+
+	GPIO_InitStructure.GPIO_Pin = SOFT_I2C_SCL_PIN | SOFT_I2C_SDA_PIN;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;  	/* ��©��� */
+	GPIO_Init(GPIO_PORT_SOFT_I2C, &GPIO_InitStructure);
+    
+	/* ��һ��ֹͣ�ź�, ��λI2C�����ϵ������豸������ģʽ */
+	i2c_Stop();
+}
+
+/*
+*********************************************************************************************************
+*	�� �� ��: i2c_CheckDevice
+*	����˵��: ���I2C�����豸��CPU�����豸��ַ��Ȼ���ȡ�豸Ӧ�����жϸ��豸�Ƿ����
+*	��    �Σ�_Address���豸��I2C���ߵ�ַ
+*	�� �� ֵ: ����ֵ 0 ��ʾ��ȷ�� ����1��ʾδ̽�⵽
+*********************************************************************************************************
+*/
+uint8_t i2c_CheckDevice(uint8_t _Address)
+{
+	uint8_t ucAck;
+
+	i2c_GPIO_Config();		/* ����GPIO */
+	
+	i2c_Start();		/* ���������ź� */
+
+	/* �����豸��ַ+��д����bit��0 = w�� 1 = r) bit7 �ȴ� */
+	i2c_SendByte(_Address|I2C_WR);
+	ucAck = i2c_WaitAck();	/* ����豸��ACKӦ�� */
+
+	i2c_Stop();			/* ����ֹͣ�ź� */
+
+	return ucAck;
+}
+
+==================================================
+
+文件名: bsp_soft_i2c.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\bsp_soft_i2c.h
+文件内容:
+#ifndef _BSP_I2C_H
+#define _BSP_I2C_H
+
+#include <inttypes.h>
+
+#define I2C_WR	0		/* д����bit */
+#define I2C_RD	1		/* ������bit */
+
+/* ����I2C�������ӵ�GPIO�˿�, �û�ֻ��Ҫ�޸�����4�д��뼴������ı�SCL��SDA������ */
+#define GPIO_PORT_SOFT_I2C	    GPIOB			/* GPIO�˿� */
+#define RCC_SOFT_GPIO_PORT      RCC_APB2Periph_GPIOB
+#define SOFT_I2C_SCL_PIN		GPIO_Pin_6			/* ���ӵ�SCLʱ���ߵ�GPIO */
+#define SOFT_I2C_SDA_PIN		GPIO_Pin_7 		/* ���ӵ�SDA�����ߵ�GPIO */
+
+void i2c_Start(void);
+void i2c_Stop(void);
+void i2c_SendByte(uint8_t _ucByte);
+uint8_t i2c_ReadByte(uint8_t ack);
+uint8_t i2c_WaitAck(void);
+void i2c_Ack(void);
+void i2c_NAck(void);
+uint8_t i2c_CheckDevice(uint8_t _Address);
+void i2c_GPIO_Config(void);
+
+#endif
+
+==================================================
+
+文件名: bsp_usart.c
+文件路径: C:\ros2_car\CarMove_IIC\USER\bsp_usart.c
+文件内容:
+/**
+  ******************************************************************************
+  * @file    bsp_usart.c
+  * @version V1.0
+  * @date    2013-xx-xx
+  * @brief   �����õ�printf���ڣ��ض���printf������
+  ******************************************************************************
+  * @attention
+  *
+  * ʵ��ƽ̨:Ұ�� F103-MINI STM32 ������ 
+  * ��̳    :http://www.firebbs.cn
+  * �Ա�    :https://fire-stm32.taobao.com
+  *
+  ******************************************************************************
+  */ 
+
+
+#include "bsp_usart.h"
+
+
+ /**
+  * @brief  USART GPIO ����,������������
+  * @param  ��
+  * @retval ��
+  */
+void USART_Config(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+	USART_InitTypeDef USART_InitStructure;
+
+	// �򿪴���GPIO��ʱ��
+	DEBUG_USART_GPIO_APBxClkCmd(DEBUG_USART_GPIO_CLK, ENABLE); 
+	
+	// �򿪴��������ʱ��
+	DEBUG_USART_APBxClkCmd(DEBUG_USART_CLK, ENABLE);
+
+	// ��USART Tx��GPIO����Ϊ���츴��ģʽ
+	GPIO_InitStructure.GPIO_Pin = DEBUG_USART_TX_GPIO_PIN;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(DEBUG_USART_TX_GPIO_PORT, &GPIO_InitStructure);
+
+  // ��USART Rx��GPIO����Ϊ��������ģʽ
+	GPIO_InitStructure.GPIO_Pin = DEBUG_USART_RX_GPIO_PIN;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_Init(DEBUG_USART_RX_GPIO_PORT, &GPIO_InitStructure);
+	
+	// ���ô��ڵĹ�������
+	// ���ò�����
+	USART_InitStructure.USART_BaudRate = DEBUG_USART_BAUDRATE;
+	// ���� �������ֳ�
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+	// ����ֹͣλ
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;
+	// ����У��λ
+	USART_InitStructure.USART_Parity = USART_Parity_No ;
+	// ����Ӳ��������
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	// ���ù���ģʽ���շ�һ��
+	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+	// ��ɴ��ڵĳ�ʼ������
+	USART_Init(DEBUG_USARTx, &USART_InitStructure);
+
+	// ʹ�ܴ���
+	USART_Cmd(DEBUG_USARTx, ENABLE);	    
+}
+
+
+///�ض���c�⺯��printf�����ڣ��ض�����ʹ��printf����
+// bsp_usart.c
+int fputc_bsp(int ch, FILE *f)
+{
+    USART_SendData(DEBUG_USARTx, (uint8_t) ch);
+    while (USART_GetFlagStatus(DEBUG_USARTx, USART_FLAG_TXE) == RESET);
+    return ch;
+}
+
+
+///�ض���c�⺯��scanf�����ڣ���д����ʹ��scanf��getchar�Ⱥ���
+int fgetc(FILE *f)
+{
+		/* �ȴ������������� */
+		while (USART_GetFlagStatus(DEBUG_USARTx, USART_FLAG_RXNE) == RESET);
+
+		return (int)USART_ReceiveData(DEBUG_USARTx);
+}
+
+
+==================================================
+
+文件名: bsp_usart.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\bsp_usart.h
+文件内容:
+#ifndef __USART_H
+#define	__USART_H
+
+
+#include "stm32f10x.h"
+#include <stdio.h>
+
+/** 
+  * ���ں궨�壬��ͬ�Ĵ��ڹ��ص����ߺ�IO��һ������ֲʱ��Ҫ�޸��⼸����
+	* 1-�޸�����ʱ�ӵĺ꣬uart1���ص�apb2���ߣ�����uart���ص�apb1����
+	* 2-�޸�GPIO�ĺ�
+  */
+	
+// ����1-USART1
+#define  DEBUG_USARTx                   USART1
+#define  DEBUG_USART_CLK                RCC_APB2Periph_USART1
+#define  DEBUG_USART_APBxClkCmd         RCC_APB2PeriphClockCmd
+#define  DEBUG_USART_BAUDRATE           115200
+
+// USART GPIO ���ź궨��
+#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOA)
+#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
+    
+#define  DEBUG_USART_TX_GPIO_PORT         GPIOA   
+#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_9
+#define  DEBUG_USART_RX_GPIO_PORT       GPIOA
+#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_10
+
+#define  DEBUG_USART_IRQ                USART1_IRQn
+#define  DEBUG_USART_IRQHandler         USART1_IRQHandler
+
+
+// ����2-USART2
+//#define  DEBUG_USARTx                   USART2
+//#define  DEBUG_USART_CLK                RCC_APB1Periph_USART2
+//#define  DEBUG_USART_APBxClkCmd         RCC_APB1PeriphClockCmd
+//#define  DEBUG_USART_BAUDRATE           115200
+
+//// USART GPIO ���ź궨��
+//#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOA)
+//#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
+//    
+//#define  DEBUG_USART_TX_GPIO_PORT         GPIOA   
+//#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_2
+//#define  DEBUG_USART_RX_GPIO_PORT       GPIOA
+//#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_3
+
+//#define  DEBUG_USART_IRQ                USART2_IRQn
+//#define  DEBUG_USART_IRQHandler         USART2_IRQHandler
+
+// ����3-USART3
+//#define  DEBUG_USARTx                   USART3
+//#define  DEBUG_USART_CLK                RCC_APB1Periph_USART3
+//#define  DEBUG_USART_APBxClkCmd         RCC_APB1PeriphClockCmd
+//#define  DEBUG_USART_BAUDRATE           115200
+
+//// USART GPIO ���ź궨��
+//#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOB)
+//#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
+//    
+//#define  DEBUG_USART_TX_GPIO_PORT         GPIOB   
+//#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_10
+//#define  DEBUG_USART_RX_GPIO_PORT       GPIOB
+//#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_11
+
+//#define  DEBUG_USART_IRQ                USART3_IRQn
+//#define  DEBUG_USART_IRQHandler         USART3_IRQHandler
+
+// ����4-UART4
+//#define  DEBUG_USARTx                   UART4
+//#define  DEBUG_USART_CLK                RCC_APB1Periph_UART4
+//#define  DEBUG_USART_APBxClkCmd         RCC_APB1PeriphClockCmd
+//#define  DEBUG_USART_BAUDRATE           115200
+
+//// USART GPIO ���ź궨��
+//#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOC)
+//#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
+//    
+//#define  DEBUG_USART_TX_GPIO_PORT         GPIOC   
+//#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_10
+//#define  DEBUG_USART_RX_GPIO_PORT       GPIOC
+//#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_11
+
+//#define  DEBUG_USART_IRQ                UART4_IRQn
+//#define  DEBUG_USART_IRQHandler         UART4_IRQHandler
+
+
+// ����5-UART5
+//#define  DEBUG_USARTx                   UART5
+//#define  DEBUG_USART_CLK                RCC_APB1Periph_UART5
+//#define  DEBUG_USART_APBxClkCmd         RCC_APB1PeriphClockCmd
+//#define  DEBUG_USART_BAUDRATE           115200
+
+//// USART GPIO ���ź궨��
+//#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOD)
+//#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
+//    
+//#define  DEBUG_USART_TX_GPIO_PORT         GPIOC   
+//#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_12
+//#define  DEBUG_USART_RX_GPIO_PORT       GPIOD
+//#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_2
+
+//#define  DEBUG_USART_IRQ                UART5_IRQn
+//#define  DEBUG_USART_IRQHandler         UART5_IRQHandler
+
+
+void USART_Config(void);
+
+#endif /* __USART_H */
+
+==================================================
+
+文件名: i2c_imu.c
+文件路径: C:\ros2_car\CarMove_IIC\USER\i2c_imu.c
+文件内容:
+#include "i2c_imu.h"
+
+// 添加超时机制
+#define I2C_TIMEOUT 40000
+
+
+
+// 带超时的等待函数
+void WaitEvent(I2C_TypeDef* I2Cx, uint32_t I2C_EVENT)
+{
+    uint32_t timecount = I2C_TIMEOUT;
+    while(I2C_CheckEvent(I2Cx, I2C_EVENT) == ERROR)
+    {
+        timecount--;
+        if(timecount == 0) {
+            printf("I2C event timeout: 0x%08lX\r\n", I2C_EVENT);  // 改为英文避免编码问题
+            // LED1_ON;  // 暂时注释掉，如果需要请先定义LED控制
+            break;
+        }
+    }
+}
+
+// I2C初始化
+void I2C_Configuration(void)
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+    I2C_InitTypeDef I2C_InitStructure;
+    
+    // 使能GPIOB和I2C1时钟
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO, ENABLE);
+    I2C_IMU_CLK_CMD(I2C_IMU_CLK_Periph, ENABLE);
+    
+    // 配置I2C引脚：PB6(SCL), PB7(SDA)
+    GPIO_InitStructure.GPIO_Pin = I2C_IMU_SCL_PIN | I2C_IMU_SDA_PIN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_OD;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(I2C_IMU_PORT, &GPIO_InitStructure);
+    
+    // I2C配置
+    I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
+    I2C_InitStructure.I2C_DutyCycle = I2C_DutyCycle_2;
+    I2C_InitStructure.I2C_OwnAddress1 = 0x00;
+    I2C_InitStructure.I2C_Ack = I2C_Ack_Enable;
+    I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
+    I2C_InitStructure.I2C_ClockSpeed = 100000;  // 降低到100kHz提高稳定性
+    
+    I2C_Init(I2C_IMU, &I2C_InitStructure);
+    I2C_Cmd(I2C_IMU, ENABLE);
+    
+    printf("I2C1 initialized (PB6-SCL, PB7-SDA, 100kHz)\r\n");
+}
+
+// 其他函数保持不变...
+void I2C_Start(void)
+{
+    I2C_GenerateSTART(I2C_IMU, ENABLE);
+    WaitEvent(I2C_IMU, I2C_EVENT_MASTER_MODE_SELECT);
+}
+
+uint8_t I2C_WaitAck(void)
+{
+    WaitEvent(I2C_IMU, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED);
+    return 0;
+}
+
+void I2C_SendByte(uint8_t data)
+{
+    I2C_SendData(I2C_IMU, data);
+    WaitEvent(I2C_IMU, I2C_EVENT_MASTER_BYTE_TRANSMITTED);
+}
+
+uint8_t I2C_ReadByte(void)
+{
+    WaitEvent(I2C_IMU, I2C_EVENT_MASTER_BYTE_RECEIVED);
+    return I2C_ReceiveData(I2C_IMU);
+}
+
+void I2C_Stop(void)
+{
+    I2C_GenerateSTOP(I2C_IMU, ENABLE);
+}
+
+void I2C_Ack(void)
+{
+    I2C_AcknowledgeConfig(I2C_IMU, ENABLE);
+}
+
+void I2C_NAck(void)
+{
+    I2C_AcknowledgeConfig(I2C_IMU, DISABLE);
+}
+==================================================
+
+文件名: i2c_imu.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\i2c_imu.h
+文件内容:
+#ifndef __I2C_IMU_H
+#define __I2C_IMU_H
+
+#include "AllHeader.h"
+
+// MPU6050地址定义
+#define MPU6050_ADDRESS 0xD0  // 7位地址左移1位
+#define MPU6050_WHO_AM_I 0x75
+#define ERROR 0
+#define SUCCESS 1
+// I2C引脚定义
+#define I2C_IMU_PORT GPIOB
+#define I2C_IMU_SCL_PIN GPIO_Pin_6
+#define I2C_IMU_SDA_PIN GPIO_Pin_7
+#define I2C_IMU_CLK RCC_APB2Periph_GPIOB
+#define I2C_IMU I2C1
+#define I2C_IMU_CLK_CMD RCC_APB1PeriphClockCmd
+#define I2C_IMU_CLK_Periph RCC_APB1Periph_I2C1
+
+// 函数声明
+void I2C_Configuration(void);
+void I2C_Start(void);
+void I2C_Stop(void);
+uint8_t I2C_WaitAck(void);
+void I2C_Ack(void);
+void I2C_NAck(void);
+void I2C_SendByte(uint8_t data);
+uint8_t I2C_ReadByte(void);
+
+#endif
+==================================================
+
+文件名: main.c
+文件路径: C:\ros2_car\CarMove_IIC\USER\main.c
+文件内容:
+#include "AllHeader.h"
+#include "mpu6050.h"
+
+// 添加 IMU 数据结构体定义
+typedef struct {
+    short accel_x;
+    short accel_y;
+    short accel_z;
+    short gyro_x;
+    short gyro_y;
+    short gyro_z;
+    short temp;
+} IMUData;
+
+// 全局变量
+IMUData imu_data = {0};
+// 函数声明
+uint32_t GetSystemTime(void);
+void ExecuteCommand(char cmd);
+void CheckCommandTimeout(void);
+void SendEncoderData(void);
+void SendIMUData(void);
+void CalculateOdometry(void);
+void USART1_Init(void);
+void SyncSystemTime(uint32_t ros_time_ms);
+void ReadEncoderData(int* encoder_data);
+#define TX_BUFFER_SIZE 256
+char tx_buffer[TX_BUFFER_SIZE];
+uint16_t tx_buffer_head = 0;
+uint16_t tx_buffer_tail = 0;
+uint8_t is_sending = 0; // 标志位，指示DMA是否正在发送
+// 配置参数
+#define UPLOAD_DATA 1
+#define MOTOR_TYPE 1
+uint32_t system_time_offset = 0;
+uint8_t time_sync_enabled = 0;
+
+// 电机参数
+#define PULSE_PER_REVOLUTION (11.0f * 30.0f)
+#define WHEEL_DIAMETER 0.067f
+#define WHEEL_CIRCUMFERENCE (3.14159f * WHEEL_DIAMETER)
+#define DISTANCE_PER_PULSE (WHEEL_CIRCUMFERENCE / PULSE_PER_REVOLUTION)
+#define WHEEL_BASE 0.16f
+static uint32_t monotonic_time_ms = 0;
+static uint32_t last_timestamp = 0;
+uint8_t times = 0;
+uint8_t upload_counter = 0;
+volatile char current_cmd = 0;
+uint32_t last_cmd_time = 0;
+uint32_t last_send_time = 0;
+uint32_t last_imu_time = 0;
+uint32_t last_calc_time = 0;
+#define CMD_TIMEOUT 500
+#define SEND_INTERVAL 20    // 编码器数据发送间隔(ms)
+#define IMU_INTERVAL 10    // IMU数据发送间隔(ms)
+
+// 在全局变量部分添加以下内容
+static int last_valid_encoder_data[4] = {0};
+static int16_t last_motor_speeds[4] = {0};
+extern int Encoder_Offset[4];
+extern int Encoder_Now[4];
+static int32_t Encoder_Prev[4] = {0};
+
+
+// 机器人状态结构体（简化）
+typedef struct {
+    float linear_x;
+    float linear_y;
+    float angular_z;
+    float position_x;
+    float position_y;
+    float orientation;
+    int enc1, enc2, enc3, enc4;  // 四个轮子的独立脉冲数
+} RobotState;
+
+RobotState robot_state = {0};
+
+// 编码器数据读取函数：读取最新的 32 位绝对脉冲数
+void ReadEncoderData(int* encoder_data)
+{
+    static uint8_t error_count = 0;
+    uint8_t retry_count = 0;
+    bool data_valid = false;
+    
+    // 重试机制
+    for(retry_count = 0; retry_count < 3; retry_count++) {
+        #if UPLOAD_DATA == 1
+            // 【修改】调用 Read_ALL_Enconder (假设 Read_ALL_Enconder() 返回 32 位绝对脉冲数)
+            Read_ALL_Enconder(); 
+            for(int i = 0; i < 4; i++) {
+                // 读取 32 位绝对脉冲数
+                encoder_data[i] = Encoder_Now[i]; 
+            }
+        #elif UPLOAD_DATA == 2
+            // 兼容旧的 16 位偏移量模式
+            Read_10_Enconder();
+            for(int i = 0; i < 4; i++) {
+                encoder_data[i] = Encoder_Offset[i];
+            }
+        #endif
+        
+        // 数据有效性检查
+        data_valid = true;
+        for(int i = 0; i < 4; i++) {
+            // 检查异常值：仅检查错误标志 -1
+            if(encoder_data[i] == -1 /* || abs(encoder_data[i]) > 1000 */) { // 移除了对绝对值的无意义检查
+                data_valid = false;
+                error_count++;
+                break;
+            }
+        }
+        
+        if(data_valid) {
+            error_count = 0;
+            // 更新有效数据
+            for(int i = 0; i < 4; i++) {
+                last_valid_encoder_data[i] = encoder_data[i];
+            }
+            break;
+        } else {
+            // 数据无效，重试前短暂延迟
+            delay_ms(1);
+        }
+    }
+    
+    // 如果重试后仍然无效，使用上次有效值
+    if(!data_valid) {
+        for(int i = 0; i < 4; i++) {
+            encoder_data[i] = last_valid_encoder_data[i];
+        }
+        
+        static uint32_t last_error_report = 0;
+        uint32_t current_time = GetSystemTime();
+        if(current_time - last_error_report > 5000) {
+            printf("编码器数据异常，使用上次有效值。错误计数: %d\r\n", error_count);
+            last_error_report = current_time;
+        }
+    }
+}
+
+// 里程计计算函数：计算本次的【脉冲差值】(Delta Pulse)
+void CalculateOdometry(void)
+{
+    uint32_t current_time = GetSystemTime();
+    
+    // 1. 读取最新的 32 位绝对脉冲数
+    int encoder_now_data[4] = {0}; 
+    ReadEncoderData(encoder_now_data); 
+    
+    // 2. 计算脉冲差值 (Delta Pulse)
+    int32_t delta_pulse[4]; 
+
+    for(int i = 0; i < 4; i++) {
+        // 计算本次脉冲增量： 当前值 - 上次值
+        // 使用 int32_t 确保计算的准确性
+        delta_pulse[i] = encoder_now_data[i] - Encoder_Prev[i]; 
+
+        // 3. 【死区过滤】：只对运动增量进行过滤
+        if(delta_pulse[i] >= -2 && delta_pulse[i] <= 2) {
+            delta_pulse[i] = 0;
+        }
+
+        // 4. 更新上次脉冲数 (使用本次读取的绝对值)
+        Encoder_Prev[i] = encoder_now_data[i]; 
+    }
+    
+    // 5. 将计算出的【脉冲差值】存入 robot_state，供 SendEncoderData 使用
+    robot_state.enc1 = delta_pulse[0];
+    robot_state.enc2 = delta_pulse[1];
+    robot_state.enc3 = delta_pulse[2];
+    robot_state.enc4 = delta_pulse[3];
+    
+    // 保持时间记录，用于主循环的定时逻辑
+    last_calc_time = current_time;
+    
+    // 简化：ROS2端会进行更精确的 dt 计算，此处不再计算线速度和角速度。
+}
+
+// 发送编码器数据（只发送四个轮子的独立脉冲数）
+void SendEncoderData(void)
+{
+    char buffer[128];
+    uint32_t current_time_ms = GetSystemTime();
+    
+    // 发送四个轮子的独立脉冲数
+    int len = snprintf(buffer, sizeof(buffer), 
+                      "/four_wheel_encoder,%d,%d,%d,%d,%lu\n",
+                      robot_state.enc1, robot_state.enc2, 
+                      robot_state.enc3, robot_state.enc4,
+                      current_time_ms);
+    
+    if(len > 0 && len < sizeof(buffer)) {
+        for(int i = 0; i < len; i++) {
+            while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+            USART_SendData(USART1, buffer[i]);
+        }
+    }
+}
+
+// 发送IMU数据（保持不变）
+void SendIMUData(void) {
+    char buffer[128];
+    uint32_t current_time_ms = GetSystemTime();
+    
+    static uint8_t error_count = 0;
+    static uint32_t last_error_time = 0;
+    
+    // 使用局部变量避免命名冲突
+    short accel_data[3], gyro_data[3], temp_data;
+    
+    // 修改为无下划线的函数调用
+    MPU6050ReadAcc(accel_data);    // 读取加速度数据
+    MPU6050ReadGyro(gyro_data);    // 读取陀螺仪数据  
+    MPU6050ReadTemp(&temp_data);   // 读取温度数据
+    
+    // 赋值给结构体
+    imu_data.accel_x = accel_data[0];
+    imu_data.accel_y = accel_data[1]; 
+    imu_data.accel_z = accel_data[2];
+    imu_data.gyro_x = gyro_data[0];
+    imu_data.gyro_y = gyro_data[1];
+    imu_data.gyro_z = gyro_data[2];
+    imu_data.temp = temp_data;
+    
+    // 检查数据有效性
+    if(imu_data.accel_x == 0 && imu_data.accel_y == 0 && imu_data.accel_z == 0) {
+        error_count++;
+        uint32_t current_time = GetSystemTime();
+        
+        if(current_time - last_error_time > 5000) {
+            printf("IMU数据读取失败 (错误计数: %d)，请检查MPU6050连接\r\n", error_count);
+            last_error_time = current_time;
+        }
+        return;
+    }
+    
+    error_count = 0;
+    
+    int len = snprintf(buffer, sizeof(buffer), 
+                      "/imu_data,%d,%d,%d,%d,%d,%d,%d,%lu\n",
+                      imu_data.accel_x, imu_data.accel_y, imu_data.accel_z,
+                      imu_data.gyro_x, imu_data.gyro_y, imu_data.gyro_z,
+                      imu_data.temp, current_time_ms);
+    
+    if(len > 0 && len < sizeof(buffer)) {
+        for(int i = 0; i < len; i++) {
+            while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+            USART_SendData(USART1, buffer[i]);
+        }
+    }
+}
+
+// 串口初始化函数（保持不变）
+void USART1_Init(void)
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+    USART_InitTypeDef USART_InitStructure;
+    NVIC_InitTypeDef NVIC_InitStructure;
+    
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA, ENABLE);
+    
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOA, &GPIO_InitStructure);
+    
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOA, &GPIO_InitStructure);
+    
+    USART_InitStructure.USART_BaudRate = 115200;
+    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+    USART_InitStructure.USART_StopBits = USART_StopBits_1;
+    USART_InitStructure.USART_Parity = USART_Parity_No;
+    USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+    USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+    USART_Init(USART1, &USART_InitStructure);
+    
+    USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+    
+    NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+    
+    USART_Cmd(USART1, ENABLE);
+}
+
+// 时间同步函数（保持不变）
+void SyncSystemTime(uint32_t ros_time_ms)
+{
+    system_time_offset = ros_time_ms - (times * 10);
+    time_sync_enabled = 1;
+    printf("时间同步完成: ROS时间=%lums, STM32时间=%lums, 偏移量=%lums\r\n", 
+           ros_time_ms, times*10, system_time_offset);
+}
+
+// 串口中断服务函数（保持不变）
+void USART1_IRQHandler(void)
+{
+    if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
+    {
+        char received_char = USART_ReceiveData(USART1);
+        
+        if(received_char == 'W' || received_char == 'A' || 
+           received_char == 'S' || received_char == 'D')
+        {
+            current_cmd = received_char;
+            last_cmd_time = GetSystemTime();
+            printf("CMD_RECV: %c\r\n", received_char);
+        }
+        else if(received_char == 'T') {
+            char time_buffer[12];
+            int i = 0;
+            uint32_t ros_time = 0;
+            
+            while(i < 11) {
+                if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
+                    char digit = USART_ReceiveData(USART1);
+                    if(digit == '\n' || digit == '\r') break;
+                    time_buffer[i++] = digit;
+                }
+            }
+            time_buffer[i] = '\0';
+            
+            if(i > 0) {
+                ros_time = atol(time_buffer);
+                SyncSystemTime(ros_time);
+            }
+        }
+        
+        USART_ClearITPendingBit(USART1, USART_IT_RXNE);
+    }
+}
+
+int main(void)
+{	
+    bsp_init();
+    USART1_Init();
+    TIM3_Init();
+    IIC_Motor_Init();
+    MPU6050_Init();
+    
+    printf("ROS2四轮差速传感器数据发布系统初始化完成...\r\n");
+    printf("数据发布格式:\r\n");
+    printf("- /four_wheel_encoder,enc1,enc2,enc3,enc4,时间戳\r\n");
+    printf("- /imu_data,accel_x,accel_y,accel_z,gyro_x,gyro_y,gyro_z,temp,时间戳\r\n");
+    
+    // 在main函数初始化后添加诊断信息
+    printf("开始硬件诊断...\r\n");
+
+    // 检查MPU6050
+    if(MPU6050ReadID() == 0) {
+        printf("MPU6050初始化失败，请检查连接\r\n");
+    } else {
+        printf("MPU6050初始化成功\r\n");
+    }
+
+    // 检查编码器
+    int test_encoder[4];
+    ReadEncoderData(test_encoder);
+    printf("编码器测试读数: %d,%d,%d,%d\r\n", 
+           test_encoder[0], test_encoder[1], test_encoder[2], test_encoder[3]);
+    
+    #if MOTOR_TYPE == 1
+    Set_motor_type(1);
+    delay_ms(100);
+    Set_Pluse_Phase(30);
+    delay_ms(100);
+    Set_Pluse_line(11);
+    delay_ms(100);
+    Set_Wheel_dis(67.00);
+    delay_ms(100);
+    Set_motor_deadzone(1900);
+    delay_ms(100);
+    #endif
+
+    control_speed(0,0,0,0);
+    delay_ms(1000);
+    
+    printf("系统就绪，开始发布传感器数据...\r\n");
+    
+    last_calc_time = GetSystemTime();
+    last_send_time = GetSystemTime();
+    last_imu_time = GetSystemTime();
+
+    while(1)
+    {
+        ExecuteCommand(current_cmd);
+        CheckCommandTimeout();
+        
+        uint32_t current_time = GetSystemTime();
+        
+        // 如果刚停止，延迟一段时间再采集数据以减少抖动影响
+        static uint32_t last_stop_time = 0;
+        if(current_cmd == 0 && (current_time - last_stop_time < 50)) {
+            // 停止后的50ms内不采集数据
+        } else {
+            // 正常数据采集
+            if(current_time - last_send_time > SEND_INTERVAL) {
+                CalculateOdometry();
+                SendEncoderData();
+                last_send_time = current_time;
+            }
+            
+            if(current_time - last_imu_time > IMU_INTERVAL) {
+                SendIMUData();
+                last_imu_time = current_time;
+            }
+        }
+        
+        if(upload_counter >= 200) {
+            // 简化系统状态显示，只显示四个轮子的脉冲数
+            printf("系统状态 - 四轮脉冲: %d,%d,%d,%d | IMU: 正常采集\r\n", 
+                   robot_state.enc1, robot_state.enc2, robot_state.enc3, robot_state.enc4);
+            upload_counter = 0;
+        }
+        
+        times++;
+        upload_counter++;
+    }
+}
+
+// 替换原有的 GetSystemTime 函数
+uint32_t GetSystemTime(void)
+{
+    uint32_t current_time;
+    
+    // 确保原子操作
+    __disable_irq();
+    current_time = monotonic_time_ms;
+    __enable_irq();
+    
+    // 确保时间戳单调递增
+    if(current_time <= last_timestamp) {
+        current_time = last_timestamp + 1;
+    }
+    last_timestamp = current_time;
+    
+    return current_time;
+}
+
+// 平滑控制函数
+void SmoothControlSpeed(int16_t m1, int16_t m2, int16_t m3, int16_t m4)
+{
+    const int16_t max_acceleration = 100; // 最大加速度限制
+    int16_t target_speeds[4] = {m1, m2, m3, m4};
+    
+    // 平滑过渡
+    for(int i = 0; i < 4; i++) {
+        int16_t diff = target_speeds[i] - last_motor_speeds[i];
+        
+        // 限制加速度
+        if(abs(diff) > max_acceleration) {
+            target_speeds[i] = last_motor_speeds[i] + 
+                (diff > 0 ? max_acceleration : -max_acceleration);
+        }
+        
+        last_motor_speeds[i] = target_speeds[i];
+    }
+    
+    control_speed(target_speeds[0], target_speeds[1], 
+                  target_speeds[2], target_speeds[3]);
+}
+
+// 执行命令函数
+void ExecuteCommand(char cmd)
+{
+    int speed = 300;
+    static uint32_t last_stop_time = 0;
+
+    switch(cmd)
+    {
+        case 'W':
+            SmoothControlSpeed(speed, speed, speed, speed);
+            break;
+        case 'S':
+            SmoothControlSpeed(-speed, -speed, -speed, -speed);
+            break;
+        case 'A':
+            SmoothControlSpeed(-speed, -speed, speed, speed); 
+            break;
+        case 'D':
+            SmoothControlSpeed(speed, speed, -speed, -speed); 
+            break;
+        default:
+            // 停止时使用平滑减速
+            SmoothControlSpeed(0, 0, 0, 0);
+            
+            // 记录停止时间，用于延迟数据采集
+            last_stop_time = GetSystemTime();
+            break;
+    }
+}
+
+void CheckCommandTimeout(void)
+{
+    uint32_t current_time = GetSystemTime();
+    if((current_time - last_cmd_time) > CMD_TIMEOUT && current_cmd != 0)
+    {
+        current_cmd = 0;
+    }
+}
+==================================================
+
+文件名: motor_control.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\motor_control.h
+文件内容:
+
+==================================================
+
+文件名: mpu6050.c
+文件路径: C:\ros2_car\CarMove_IIC\USER\mpu6050.c
+文件内容:
+/**
+  ******************************************************************************
+  * @file    bsp_led.c
+  * @author  fire
+  * @version V1.0
+  * @date    2013-xx-xx
+  * @brief   MPU6050����
+  ******************************************************************************
+  * @attention
+  *
+  * ʵ��ƽ̨:Ұ�� F103-MINI STM32 ������ 
+  * ��̳    :http://www.firebbs.cn
+  * �Ա�    :https://fire-stm32.taobao.com
+  *
+  ******************************************************************************
+  */
+
+
+#include "mpu6050.h"
+#include "bsp_usart.h"
+
+
+
+#ifdef   soft_IIC
+#include "bsp_soft_i2c.h"
+
+/**
+  * @brief   д���ݵ�MPU6050�Ĵ���
+  * @param   
+  * @retval  
+  */
+void MPU6050_WriteReg(u8 reg_add,u8 reg_dat)
+{
+	i2c_Start();
+	i2c_SendByte(MPU6050_SLAVE_ADDRESS);
+	i2c_WaitAck();
+	i2c_SendByte(reg_add);
+	i2c_WaitAck();
+	i2c_SendByte(reg_dat);
+	i2c_WaitAck();
+	i2c_Stop();
+}
+
+
+/**
+  * @brief   ��MPU6050�Ĵ�����ȡ����
+  * @param   
+  * @retval  
+  */
+void MPU6050_ReadData(u8 reg_add,unsigned char*Read,u8 num)
+{
+	unsigned char i;
+	
+	i2c_Start();
+	i2c_SendByte(MPU6050_SLAVE_ADDRESS);
+	i2c_WaitAck();
+	i2c_SendByte(reg_add);
+	i2c_WaitAck();
+	
+	i2c_Start();
+	i2c_SendByte(MPU6050_SLAVE_ADDRESS+1);
+	i2c_WaitAck();
+	
+	for(i=0;i<(num-1);i++){
+		*Read=i2c_ReadByte(1);
+		Read++;
+	}
+	*Read=i2c_ReadByte(0);
+	i2c_Stop();
+}
+
+
+#else
+#include "./iic/bsp_hard_i2c.h"
+
+/**
+ * @brief  ���Ĵ����������ṩ���ϲ�Ľӿ�
+ * @param  slave_addr: �ӻ���ַ
+ * @param 	reg_addr:�Ĵ�����ַ
+ * @param len��Ҫ��ȡ�ĳ���
+ *	@param data_ptr:ָ��Ҫ�洢���ݵ�ָ��
+ * @retval ����Ϊ0��������Ϊ��0
+ */
+void MPU6050_ReadData(u8 reg_add,unsigned char*Read,u8 num)
+{
+    I2C_BufferRead(Read,reg_add,num);
+}
+
+/**
+ * @brief  д�Ĵ����������ṩ���ϲ�Ľӿ�
+ * @param  slave_addr: �ӻ���ַ
+ * @param 	reg_addr:�Ĵ�����ַ
+ * @param len��д��ĳ���
+ *	@param data_ptr:ָ��Ҫд�������
+ * @retval ����Ϊ0��������Ϊ��0
+ */
+void MPU6050_WriteReg(u8 reg_add,u8 reg_dat)
+{
+    I2C_ByteWrite(reg_dat,reg_add);
+}
+
+
+#endif
+
+
+
+/**
+  * @brief   ��ʼ��MPU6050оƬ
+  * @param   
+  * @retval  
+  */
+void MPU6050_Init(void)
+{
+    int i, j;
+    
+    printf("开始MPU6050初始化...\r\n");
+    
+    // 确保I2C GPIO已配置
+    i2c_GPIO_Config();
+    
+    // 更长的延时等待电源稳定
+    for(i = 0; i < 3000; i++) {
+        for(j = 0; j < 1000; j++) {
+            ;
+        }
+    }
+    
+    // 尝试多次读取WHO_AM_I
+    uint8_t whoami = 0;
+    int retry_count = 5;
+    
+    for(i = 0; i < retry_count; i++) {
+        printf("尝试 %d/%d: 读取WHO_AM_I...", i+1, retry_count);
+        
+        MPU6050_ReadData(MPU6050_RA_WHO_AM_I, &whoami, 1);
+        
+        if(whoami == 0x68 || whoami == 0x69) {
+            printf("✅ 成功: 0x%02X\r\n", whoami);
+            break;
+        } else {
+            printf("❌ 失败: 0x%02X\r\n", whoami);
+            delay_ms(100);
+        }
+    }
+    
+    if(whoami != 0x68 && whoami != 0x69) {
+        printf("MPU6050初始化失败，无法读取正确ID\r\n");
+        return;
+    }
+    
+    // 继续正常初始化流程
+    MPU6050_WriteReg(MPU6050_RA_PWR_MGMT_1, 0x00);
+    delay_ms(100);
+    
+    MPU6050_WriteReg(MPU6050_RA_SMPLRT_DIV, 0x07);
+    MPU6050_WriteReg(MPU6050_RA_CONFIG, 0x06);
+    MPU6050_WriteReg(MPU6050_RA_GYRO_CONFIG, 0x18);
+    MPU6050_WriteReg(MPU6050_RA_ACCEL_CONFIG, 0x00);
+    
+    printf("✅ MPU6050初始化成功\r\n");
+}
+
+/**
+  * @brief   ��ȡMPU6050��ID
+  * @param   
+  * @retval  
+  */
+uint8_t MPU6050ReadID(void)
+{
+    unsigned char Re = 0;
+    MPU6050_ReadData(MPU6050_RA_WHO_AM_I,&Re,1);
+
+    if(Re != 0x68)
+    {
+        printf("MPU6050 detected error!\r\n未检测到 MPU6050 模块，请检查连接。\r\n");
+        return 0;
+    }
+    else
+    {
+        printf("MPU6050 ID = %d\r\n",Re);
+        return 1;
+    }
+}
+
+/**
+  * @brief   ��ȡMPU6050�ļ��ٶ�����
+  * @param   
+  * @retval  
+  */
+void MPU6050ReadAcc(short *accData)
+{
+    u8 buf[6];
+    MPU6050_ReadData(MPU6050_ACC_OUT, buf, 6);
+    accData[0] = (buf[0] << 8) | buf[1];
+    accData[1] = (buf[2] << 8) | buf[3];
+    accData[2] = (buf[4] << 8) | buf[5];
+}
+
+/**
+  * @brief   ��ȡMPU6050�ĽǼ��ٶ�����
+  * @param   
+  * @retval  
+  */
+void MPU6050ReadGyro(short *gyroData)
+{
+    u8 buf[6];
+    MPU6050_ReadData(MPU6050_GYRO_OUT,buf,6);
+    gyroData[0] = (buf[0] << 8) | buf[1];
+    gyroData[1] = (buf[2] << 8) | buf[3];
+    gyroData[2] = (buf[4] << 8) | buf[5];
+}
+
+
+/**
+  * @brief   ��ȡMPU6050��ԭʼ�¶�����
+  * @param   
+  * @retval  
+  */
+void MPU6050ReadTemp(short *tempData)
+{
+	u8 buf[2];
+    MPU6050_ReadData(MPU6050_RA_TEMP_OUT_H,buf,2);     //��ȡ�¶�ֵ
+    *tempData = (buf[0] << 8) | buf[1];
+}
+
+
+/**
+  * @brief   ��ȡMPU6050���¶����ݣ�ת�������϶�
+  * @param   
+  * @retval  
+  */
+void MPU6050_ReturnTemp(float *Temperature)
+{
+	short temp3;
+	u8 buf[2];
+	
+	MPU6050_ReadData(MPU6050_RA_TEMP_OUT_H,buf,2);     //��ȡ�¶�ֵ
+  temp3= (buf[0] << 8) | buf[1];	
+	*Temperature=((double) temp3/340.0)+36.53;
+
+}
+
+==================================================
+
+文件名: mpu6050.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\mpu6050.h
+文件内容:
+#ifndef __MPU6050_H
+#define __MPU6050_H
+#include "stm32f10x.h"
+
+#define  soft_IIC//�Ƿ�ʹ������IIC��ע�ʹ���ʹ��Ӳ��
+
+//ģ���A0���Ž�GND��IIC��7λ��ַΪ0x68�����ӵ�VCC����Ҫ��Ϊ0x69
+#define MPU6050_SLAVE_ADDRESS  (0x68<<1)      //MPU6050��������ַ
+
+
+
+#define MPU6050_WHO_AM_I        0x75
+#define MPU6050_SMPLRT_DIV      0  //8000Hz
+#define MPU6050_DLPF_CFG        0
+#define MPU6050_GYRO_OUT        0x43     //MPU6050���������ݼĴ�����ַ
+#define MPU6050_ACC_OUT         0x3B     //MPU6050���ٶ����ݼĴ�����ַ
+
+
+
+#define MPU6050_ADDRESS_AD0_LOW     0x68 // address pin low (GND), default for InvenSense evaluation board
+#define MPU6050_ADDRESS_AD0_HIGH    0x69 // address pin high (VCC)
+#define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_LOW
+
+#define MPU6050_RA_XG_OFFS_TC       0x00 //[7] PWR_MODE, [6:1] XG_OFFS_TC, [0] OTP_BNK_VLD
+#define MPU6050_RA_YG_OFFS_TC       0x01 //[7] PWR_MODE, [6:1] YG_OFFS_TC, [0] OTP_BNK_VLD
+#define MPU6050_RA_ZG_OFFS_TC       0x02 //[7] PWR_MODE, [6:1] ZG_OFFS_TC, [0] OTP_BNK_VLD
+#define MPU6050_RA_X_FINE_GAIN      0x03 //[7:0] X_FINE_GAIN
+#define MPU6050_RA_Y_FINE_GAIN      0x04 //[7:0] Y_FINE_GAIN
+#define MPU6050_RA_Z_FINE_GAIN      0x05 //[7:0] Z_FINE_GAIN
+#define MPU6050_RA_XA_OFFS_H        0x06 //[15:0] XA_OFFS
+#define MPU6050_RA_XA_OFFS_L_TC     0x07
+#define MPU6050_RA_YA_OFFS_H        0x08 //[15:0] YA_OFFS
+#define MPU6050_RA_YA_OFFS_L_TC     0x09
+#define MPU6050_RA_ZA_OFFS_H        0x0A //[15:0] ZA_OFFS
+#define MPU6050_RA_ZA_OFFS_L_TC     0x0B
+#define MPU6050_RA_XG_OFFS_USRH     0x13 //[15:0] XG_OFFS_USR
+#define MPU6050_RA_XG_OFFS_USRL     0x14
+#define MPU6050_RA_YG_OFFS_USRH     0x15 //[15:0] YG_OFFS_USR
+#define MPU6050_RA_YG_OFFS_USRL     0x16
+#define MPU6050_RA_ZG_OFFS_USRH     0x17 //[15:0] ZG_OFFS_USR
+#define MPU6050_RA_ZG_OFFS_USRL     0x18
+#define MPU6050_RA_SMPLRT_DIV       0x19
+#define MPU6050_RA_CONFIG           0x1A
+#define MPU6050_RA_GYRO_CONFIG      0x1B
+#define MPU6050_RA_ACCEL_CONFIG     0x1C
+#define MPU6050_RA_FF_THR           0x1D
+#define MPU6050_RA_FF_DUR           0x1E
+#define MPU6050_RA_MOT_THR          0x1F
+#define MPU6050_RA_MOT_DUR          0x20
+#define MPU6050_RA_ZRMOT_THR        0x21
+#define MPU6050_RA_ZRMOT_DUR        0x22
+#define MPU6050_RA_FIFO_EN          0x23
+#define MPU6050_RA_I2C_MST_CTRL     0x24
+#define MPU6050_RA_I2C_SLV0_ADDR    0x25
+#define MPU6050_RA_I2C_SLV0_REG     0x26
+#define MPU6050_RA_I2C_SLV0_CTRL    0x27
+#define MPU6050_RA_I2C_SLV1_ADDR    0x28
+#define MPU6050_RA_I2C_SLV1_REG     0x29
+#define MPU6050_RA_I2C_SLV1_CTRL    0x2A
+#define MPU6050_RA_I2C_SLV2_ADDR    0x2B
+#define MPU6050_RA_I2C_SLV2_REG     0x2C
+#define MPU6050_RA_I2C_SLV2_CTRL    0x2D
+#define MPU6050_RA_I2C_SLV3_ADDR    0x2E
+#define MPU6050_RA_I2C_SLV3_REG     0x2F
+#define MPU6050_RA_I2C_SLV3_CTRL    0x30
+#define MPU6050_RA_I2C_SLV4_ADDR    0x31
+#define MPU6050_RA_I2C_SLV4_REG     0x32
+#define MPU6050_RA_I2C_SLV4_DO      0x33
+#define MPU6050_RA_I2C_SLV4_CTRL    0x34
+#define MPU6050_RA_I2C_SLV4_DI      0x35
+#define MPU6050_RA_I2C_MST_STATUS   0x36
+#define MPU6050_RA_INT_PIN_CFG      0x37
+#define MPU6050_RA_INT_ENABLE       0x38
+#define MPU6050_RA_DMP_INT_STATUS   0x39
+#define MPU6050_RA_INT_STATUS       0x3A
+#define MPU6050_RA_ACCEL_XOUT_H     0x3B
+#define MPU6050_RA_ACCEL_XOUT_L     0x3C
+#define MPU6050_RA_ACCEL_YOUT_H     0x3D
+#define MPU6050_RA_ACCEL_YOUT_L     0x3E
+#define MPU6050_RA_ACCEL_ZOUT_H     0x3F
+#define MPU6050_RA_ACCEL_ZOUT_L     0x40
+#define MPU6050_RA_TEMP_OUT_H       0x41
+#define MPU6050_RA_TEMP_OUT_L       0x42
+#define MPU6050_RA_GYRO_XOUT_H      0x43
+#define MPU6050_RA_GYRO_XOUT_L      0x44
+#define MPU6050_RA_GYRO_YOUT_H      0x45
+#define MPU6050_RA_GYRO_YOUT_L      0x46
+#define MPU6050_RA_GYRO_ZOUT_H      0x47
+#define MPU6050_RA_GYRO_ZOUT_L      0x48
+#define MPU6050_RA_EXT_SENS_DATA_00 0x49
+#define MPU6050_RA_EXT_SENS_DATA_01 0x4A
+#define MPU6050_RA_EXT_SENS_DATA_02 0x4B
+#define MPU6050_RA_EXT_SENS_DATA_03 0x4C
+#define MPU6050_RA_EXT_SENS_DATA_04 0x4D
+#define MPU6050_RA_EXT_SENS_DATA_05 0x4E
+#define MPU6050_RA_EXT_SENS_DATA_06 0x4F
+#define MPU6050_RA_EXT_SENS_DATA_07 0x50
+#define MPU6050_RA_EXT_SENS_DATA_08 0x51
+#define MPU6050_RA_EXT_SENS_DATA_09 0x52
+#define MPU6050_RA_EXT_SENS_DATA_10 0x53
+#define MPU6050_RA_EXT_SENS_DATA_11 0x54
+#define MPU6050_RA_EXT_SENS_DATA_12 0x55
+#define MPU6050_RA_EXT_SENS_DATA_13 0x56
+#define MPU6050_RA_EXT_SENS_DATA_14 0x57
+#define MPU6050_RA_EXT_SENS_DATA_15 0x58
+#define MPU6050_RA_EXT_SENS_DATA_16 0x59
+#define MPU6050_RA_EXT_SENS_DATA_17 0x5A
+#define MPU6050_RA_EXT_SENS_DATA_18 0x5B
+#define MPU6050_RA_EXT_SENS_DATA_19 0x5C
+#define MPU6050_RA_EXT_SENS_DATA_20 0x5D
+#define MPU6050_RA_EXT_SENS_DATA_21 0x5E
+#define MPU6050_RA_EXT_SENS_DATA_22 0x5F
+#define MPU6050_RA_EXT_SENS_DATA_23 0x60
+#define MPU6050_RA_MOT_DETECT_STATUS    0x61
+#define MPU6050_RA_I2C_SLV0_DO      0x63
+#define MPU6050_RA_I2C_SLV1_DO      0x64
+#define MPU6050_RA_I2C_SLV2_DO      0x65
+#define MPU6050_RA_I2C_SLV3_DO      0x66
+#define MPU6050_RA_I2C_MST_DELAY_CTRL   0x67
+#define MPU6050_RA_SIGNAL_PATH_RESET    0x68
+#define MPU6050_RA_MOT_DETECT_CTRL      0x69
+#define MPU6050_RA_USER_CTRL        0x6A
+#define MPU6050_RA_PWR_MGMT_1       0x6B
+#define MPU6050_RA_PWR_MGMT_2       0x6C
+#define MPU6050_RA_BANK_SEL         0x6D
+#define MPU6050_RA_MEM_START_ADDR   0x6E
+#define MPU6050_RA_MEM_R_W          0x6F
+#define MPU6050_RA_DMP_CFG_1        0x70
+#define MPU6050_RA_DMP_CFG_2        0x71
+#define MPU6050_RA_FIFO_COUNTH      0x72
+#define MPU6050_RA_FIFO_COUNTL      0x73
+#define MPU6050_RA_FIFO_R_W         0x74
+#define MPU6050_RA_WHO_AM_I         0x75
+
+#define MPU6050_TC_PWR_MODE_BIT     7
+#define MPU6050_TC_OFFSET_BIT       6
+#define MPU6050_TC_OFFSET_LENGTH    6
+#define MPU6050_TC_OTP_BNK_VLD_BIT  0
+
+#define MPU6050_VDDIO_LEVEL_VLOGIC  0
+#define MPU6050_VDDIO_LEVEL_VDD     1
+
+#define MPU6050_CFG_EXT_SYNC_SET_BIT    5
+#define MPU6050_CFG_EXT_SYNC_SET_LENGTH 3
+#define MPU6050_CFG_DLPF_CFG_BIT    2
+#define MPU6050_CFG_DLPF_CFG_LENGTH 3
+
+#define MPU6050_EXT_SYNC_DISABLED       0x0
+#define MPU6050_EXT_SYNC_TEMP_OUT_L     0x1
+#define MPU6050_EXT_SYNC_GYRO_XOUT_L    0x2
+#define MPU6050_EXT_SYNC_GYRO_YOUT_L    0x3
+#define MPU6050_EXT_SYNC_GYRO_ZOUT_L    0x4
+#define MPU6050_EXT_SYNC_ACCEL_XOUT_L   0x5
+#define MPU6050_EXT_SYNC_ACCEL_YOUT_L   0x6
+#define MPU6050_EXT_SYNC_ACCEL_ZOUT_L   0x7
+
+#define MPU6050_DLPF_BW_256         0x00
+#define MPU6050_DLPF_BW_188         0x01
+#define MPU6050_DLPF_BW_98          0x02
+#define MPU6050_DLPF_BW_42          0x03
+#define MPU6050_DLPF_BW_20          0x04
+#define MPU6050_DLPF_BW_10          0x05
+#define MPU6050_DLPF_BW_5           0x06
+
+#define MPU6050_GCONFIG_FS_SEL_BIT      4
+#define MPU6050_GCONFIG_FS_SEL_LENGTH   2
+
+#define MPU6050_GYRO_FS_250         0x00
+#define MPU6050_GYRO_FS_500         0x01
+#define MPU6050_GYRO_FS_1000        0x02
+#define MPU6050_GYRO_FS_2000        0x03
+
+#define MPU6050_ACONFIG_XA_ST_BIT           7
+#define MPU6050_ACONFIG_YA_ST_BIT           6
+#define MPU6050_ACONFIG_ZA_ST_BIT           5
+#define MPU6050_ACONFIG_AFS_SEL_BIT         4
+#define MPU6050_ACONFIG_AFS_SEL_LENGTH      2
+#define MPU6050_ACONFIG_ACCEL_HPF_BIT       2
+#define MPU6050_ACONFIG_ACCEL_HPF_LENGTH    3
+
+#define MPU6050_ACCEL_FS_2          0x00
+#define MPU6050_ACCEL_FS_4          0x01
+#define MPU6050_ACCEL_FS_8          0x02
+#define MPU6050_ACCEL_FS_16         0x03
+
+#define MPU6050_DHPF_RESET          0x00
+#define MPU6050_DHPF_5              0x01
+#define MPU6050_DHPF_2P5            0x02
+#define MPU6050_DHPF_1P25           0x03
+#define MPU6050_DHPF_0P63           0x04
+#define MPU6050_DHPF_HOLD           0x07
+
+#define MPU6050_TEMP_FIFO_EN_BIT    7
+#define MPU6050_XG_FIFO_EN_BIT      6
+#define MPU6050_YG_FIFO_EN_BIT      5
+#define MPU6050_ZG_FIFO_EN_BIT      4
+#define MPU6050_ACCEL_FIFO_EN_BIT   3
+#define MPU6050_SLV2_FIFO_EN_BIT    2
+#define MPU6050_SLV1_FIFO_EN_BIT    1
+#define MPU6050_SLV0_FIFO_EN_BIT    0
+
+#define MPU6050_MULT_MST_EN_BIT     7
+#define MPU6050_WAIT_FOR_ES_BIT     6
+#define MPU6050_SLV_3_FIFO_EN_BIT   5
+#define MPU6050_I2C_MST_P_NSR_BIT   4
+#define MPU6050_I2C_MST_CLK_BIT     3
+#define MPU6050_I2C_MST_CLK_LENGTH  4
+
+#define MPU6050_CLOCK_DIV_348       0x0
+#define MPU6050_CLOCK_DIV_333       0x1
+#define MPU6050_CLOCK_DIV_320       0x2
+#define MPU6050_CLOCK_DIV_308       0x3
+#define MPU6050_CLOCK_DIV_296       0x4
+#define MPU6050_CLOCK_DIV_286       0x5
+#define MPU6050_CLOCK_DIV_276       0x6
+#define MPU6050_CLOCK_DIV_267       0x7
+#define MPU6050_CLOCK_DIV_258       0x8
+#define MPU6050_CLOCK_DIV_500       0x9
+#define MPU6050_CLOCK_DIV_471       0xA
+#define MPU6050_CLOCK_DIV_444       0xB
+#define MPU6050_CLOCK_DIV_421       0xC
+#define MPU6050_CLOCK_DIV_400       0xD
+#define MPU6050_CLOCK_DIV_381       0xE
+#define MPU6050_CLOCK_DIV_364       0xF
+
+#define MPU6050_I2C_SLV_RW_BIT      7
+#define MPU6050_I2C_SLV_ADDR_BIT    6
+#define MPU6050_I2C_SLV_ADDR_LENGTH 7
+#define MPU6050_I2C_SLV_EN_BIT      7
+#define MPU6050_I2C_SLV_BYTE_SW_BIT 6
+#define MPU6050_I2C_SLV_REG_DIS_BIT 5
+#define MPU6050_I2C_SLV_GRP_BIT     4
+#define MPU6050_I2C_SLV_LEN_BIT     3
+#define MPU6050_I2C_SLV_LEN_LENGTH  4
+
+#define MPU6050_I2C_SLV4_RW_BIT         7
+#define MPU6050_I2C_SLV4_ADDR_BIT       6
+#define MPU6050_I2C_SLV4_ADDR_LENGTH    7
+#define MPU6050_I2C_SLV4_EN_BIT         7
+#define MPU6050_I2C_SLV4_INT_EN_BIT     6
+#define MPU6050_I2C_SLV4_REG_DIS_BIT    5
+#define MPU6050_I2C_SLV4_MST_DLY_BIT    4
+#define MPU6050_I2C_SLV4_MST_DLY_LENGTH 5
+
+#define MPU6050_MST_PASS_THROUGH_BIT    7
+#define MPU6050_MST_I2C_SLV4_DONE_BIT   6
+#define MPU6050_MST_I2C_LOST_ARB_BIT    5
+#define MPU6050_MST_I2C_SLV4_NACK_BIT   4
+#define MPU6050_MST_I2C_SLV3_NACK_BIT   3
+#define MPU6050_MST_I2C_SLV2_NACK_BIT   2
+#define MPU6050_MST_I2C_SLV1_NACK_BIT   1
+#define MPU6050_MST_I2C_SLV0_NACK_BIT   0
+
+#define MPU6050_INTCFG_INT_LEVEL_BIT        7
+#define MPU6050_INTCFG_INT_OPEN_BIT         6
+#define MPU6050_INTCFG_LATCH_INT_EN_BIT     5
+#define MPU6050_INTCFG_INT_RD_CLEAR_BIT     4
+#define MPU6050_INTCFG_FSYNC_INT_LEVEL_BIT  3
+#define MPU6050_INTCFG_FSYNC_INT_EN_BIT     2
+#define MPU6050_INTCFG_I2C_BYPASS_EN_BIT    1
+#define MPU6050_INTCFG_CLKOUT_EN_BIT        0
+
+#define MPU6050_INTMODE_ACTIVEHIGH  0x00
+#define MPU6050_INTMODE_ACTIVELOW   0x01
+
+#define MPU6050_INTDRV_PUSHPULL     0x00
+#define MPU6050_INTDRV_OPENDRAIN    0x01
+
+#define MPU6050_INTLATCH_50USPULSE  0x00
+#define MPU6050_INTLATCH_WAITCLEAR  0x01
+
+#define MPU6050_INTCLEAR_STATUSREAD 0x00
+#define MPU6050_INTCLEAR_ANYREAD    0x01
+
+#define MPU6050_INTERRUPT_FF_BIT            7
+#define MPU6050_INTERRUPT_MOT_BIT           6
+#define MPU6050_INTERRUPT_ZMOT_BIT          5
+#define MPU6050_INTERRUPT_FIFO_OFLOW_BIT    4
+#define MPU6050_INTERRUPT_I2C_MST_INT_BIT   3
+#define MPU6050_INTERRUPT_PLL_RDY_INT_BIT   2
+#define MPU6050_INTERRUPT_DMP_INT_BIT       1
+#define MPU6050_INTERRUPT_DATA_RDY_BIT      0
+
+// TODO: figure out what these actually do
+// UMPL source code is not very obivous
+#define MPU6050_DMPINT_5_BIT            5
+#define MPU6050_DMPINT_4_BIT            4
+#define MPU6050_DMPINT_3_BIT            3
+#define MPU6050_DMPINT_2_BIT            2
+#define MPU6050_DMPINT_1_BIT            1
+#define MPU6050_DMPINT_0_BIT            0
+
+#define MPU6050_MOTION_MOT_XNEG_BIT     7
+#define MPU6050_MOTION_MOT_XPOS_BIT     6
+#define MPU6050_MOTION_MOT_YNEG_BIT     5
+#define MPU6050_MOTION_MOT_YPOS_BIT     4
+#define MPU6050_MOTION_MOT_ZNEG_BIT     3
+#define MPU6050_MOTION_MOT_ZPOS_BIT     2
+#define MPU6050_MOTION_MOT_ZRMOT_BIT    0
+
+#define MPU6050_DELAYCTRL_DELAY_ES_SHADOW_BIT   7
+#define MPU6050_DELAYCTRL_I2C_SLV4_DLY_EN_BIT   4
+#define MPU6050_DELAYCTRL_I2C_SLV3_DLY_EN_BIT   3
+#define MPU6050_DELAYCTRL_I2C_SLV2_DLY_EN_BIT   2
+#define MPU6050_DELAYCTRL_I2C_SLV1_DLY_EN_BIT   1
+#define MPU6050_DELAYCTRL_I2C_SLV0_DLY_EN_BIT   0
+
+#define MPU6050_PATHRESET_GYRO_RESET_BIT    2
+#define MPU6050_PATHRESET_ACCEL_RESET_BIT   1
+#define MPU6050_PATHRESET_TEMP_RESET_BIT    0
+
+#define MPU6050_DETECT_ACCEL_ON_DELAY_BIT       5
+#define MPU6050_DETECT_ACCEL_ON_DELAY_LENGTH    2
+#define MPU6050_DETECT_FF_COUNT_BIT             3
+#define MPU6050_DETECT_FF_COUNT_LENGTH          2
+#define MPU6050_DETECT_MOT_COUNT_BIT            1
+#define MPU6050_DETECT_MOT_COUNT_LENGTH         2
+
+#define MPU6050_DETECT_DECREMENT_RESET  0x0
+#define MPU6050_DETECT_DECREMENT_1      0x1
+#define MPU6050_DETECT_DECREMENT_2      0x2
+#define MPU6050_DETECT_DECREMENT_4      0x3
+
+#define MPU6050_USERCTRL_DMP_EN_BIT             7
+#define MPU6050_USERCTRL_FIFO_EN_BIT            6
+#define MPU6050_USERCTRL_I2C_MST_EN_BIT         5
+#define MPU6050_USERCTRL_I2C_IF_DIS_BIT         4
+#define MPU6050_USERCTRL_DMP_RESET_BIT          3
+#define MPU6050_USERCTRL_FIFO_RESET_BIT         2
+#define MPU6050_USERCTRL_I2C_MST_RESET_BIT      1
+#define MPU6050_USERCTRL_SIG_COND_RESET_BIT     0
+
+#define MPU6050_PWR1_DEVICE_RESET_BIT   7
+#define MPU6050_PWR1_SLEEP_BIT          6
+#define MPU6050_PWR1_CYCLE_BIT          5
+#define MPU6050_PWR1_TEMP_DIS_BIT       3
+#define MPU6050_PWR1_CLKSEL_BIT         2
+#define MPU6050_PWR1_CLKSEL_LENGTH      3
+
+#define MPU6050_CLOCK_INTERNAL          0x00
+#define MPU6050_CLOCK_PLL_XGYRO         0x01
+#define MPU6050_CLOCK_PLL_YGYRO         0x02
+#define MPU6050_CLOCK_PLL_ZGYRO         0x03
+#define MPU6050_CLOCK_PLL_EXT32K        0x04
+#define MPU6050_CLOCK_PLL_EXT19M        0x05
+#define MPU6050_CLOCK_KEEP_RESET        0x07
+
+#define MPU6050_PWR2_LP_WAKE_CTRL_BIT       7
+#define MPU6050_PWR2_LP_WAKE_CTRL_LENGTH    2
+#define MPU6050_PWR2_STBY_XA_BIT            5
+#define MPU6050_PWR2_STBY_YA_BIT            4
+#define MPU6050_PWR2_STBY_ZA_BIT            3
+#define MPU6050_PWR2_STBY_XG_BIT            2
+#define MPU6050_PWR2_STBY_YG_BIT            1
+#define MPU6050_PWR2_STBY_ZG_BIT            0
+
+#define MPU6050_WAKE_FREQ_1P25      0x0
+#define MPU6050_WAKE_FREQ_2P5       0x1
+#define MPU6050_WAKE_FREQ_5         0x2
+#define MPU6050_WAKE_FREQ_10        0x3
+
+#define MPU6050_BANKSEL_PRFTCH_EN_BIT       6
+#define MPU6050_BANKSEL_CFG_USER_BANK_BIT   5
+#define MPU6050_BANKSEL_MEM_SEL_BIT         4
+#define MPU6050_BANKSEL_MEM_SEL_LENGTH      5
+
+#define MPU6050_WHO_AM_I_BIT        6
+#define MPU6050_WHO_AM_I_LENGTH     6
+
+#define MPU6050_DMP_MEMORY_BANKS        8
+#define MPU6050_DMP_MEMORY_BANK_SIZE    256
+#define MPU6050_DMP_MEMORY_CHUNK_SIZE   16
+
+void MPU6050ReadTemp(short *tempData);
+void MPU6050ReadGyro(short *gyroData);
+void MPU6050ReadAcc(short *accData);
+void MPU6050_ReturnTemp(float *Temperature);
+void MPU6050_Init(void);
+uint8_t MPU6050ReadID(void);
+void PMU6050_ReadData(u8 reg_add,unsigned char*Read,u8 num);
+void PMU6050_WriteReg(u8 reg_add,u8 reg_dat);
+
+void MPU6050_PWR_MGMT_1_INIT(void);
+
+
+#endif  /*__MPU6050*/
+
+==================================================
+
+文件名: myenum.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\myenum.h
+文件内容:
+#ifndef __MYENUM_H_
+#define __MYENUM_H_
+
+
+////JTAG模式设置定义	JTAG mode setting definition
+#define JTAG_SWD_DISABLE   0X02
+#define SWD_ENABLE         0X01
+#define JTAG_SWD_ENABLE    0X00
+
+
+//具体实现思想,参考<<CM3权威指南>>第五章(87页~92页).	For specific implementation ideas, refer to Chapter 5 (pages 87 to 92) of <<CM3 Authoritative Guide>>.
+//IO口操作宏定义	IO port operation macro definition
+#define BITBAND(addr, bitnum) ((addr & 0xF0000000)+0x2000000+((addr &0xFFFFF)<<5)+(bitnum<<2)) 
+#define MEM_ADDR(addr)  *((volatile unsigned long  *)(addr)) 
+#define BIT_ADDR(addr, bitnum)   MEM_ADDR(BITBAND(addr, bitnum)) 
+//IO口地址映射	IO port address mapping
+#define GPIOA_ODR_Addr    (GPIOA_BASE+12) //0x4001080C 
+#define GPIOB_ODR_Addr    (GPIOB_BASE+12) //0x40010C0C 
+#define GPIOC_ODR_Addr    (GPIOC_BASE+12) //0x4001100C 
+#define GPIOD_ODR_Addr    (GPIOD_BASE+12) //0x4001140C 
+#define GPIOE_ODR_Addr    (GPIOE_BASE+12) //0x4001180C 
+#define GPIOF_ODR_Addr    (GPIOF_BASE+12) //0x40011A0C    
+#define GPIOG_ODR_Addr    (GPIOG_BASE+12) //0x40011E0C    
+
+#define GPIOA_IDR_Addr    (GPIOA_BASE+8) //0x40010808 
+#define GPIOB_IDR_Addr    (GPIOB_BASE+8) //0x40010C08 
+#define GPIOC_IDR_Addr    (GPIOC_BASE+8) //0x40011008 
+#define GPIOD_IDR_Addr    (GPIOD_BASE+8) //0x40011408 
+#define GPIOE_IDR_Addr    (GPIOE_BASE+8) //0x40011808 
+#define GPIOF_IDR_Addr    (GPIOF_BASE+8) //0x40011A08 
+#define GPIOG_IDR_Addr    (GPIOG_BASE+8) //0x40011E08 
+ 
+//IO口操作,只对单一的IO口!	IO port operation, only for a single IO port!
+//确保n的值小于16!	Make sure the value of n is less than 16!
+#define PAout(n)   BIT_ADDR(GPIOA_ODR_Addr,n)  //输出 Output
+#define PAin(n)    BIT_ADDR(GPIOA_IDR_Addr,n)  //输入 Input
+
+#define PBout(n)   BIT_ADDR(GPIOB_ODR_Addr,n)  //输出 Output
+#define PBin(n)    BIT_ADDR(GPIOB_IDR_Addr,n)  //输入 Input
+
+#define PCout(n)   BIT_ADDR(GPIOC_ODR_Addr,n)  //输出 Output
+#define PCin(n)    BIT_ADDR(GPIOC_IDR_Addr,n)  //输入 Input
+
+#define PDout(n)   BIT_ADDR(GPIOD_ODR_Addr,n)  //输出 Output
+#define PDin(n)    BIT_ADDR(GPIOD_IDR_Addr,n)  //输入 Input
+
+#define PEout(n)   BIT_ADDR(GPIOE_ODR_Addr,n)  //输出 Output
+#define PEin(n)    BIT_ADDR(GPIOE_IDR_Addr,n)  //输入 Input
+
+#define PFout(n)   BIT_ADDR(GPIOF_ODR_Addr,n)  //输出 Output
+#define PFin(n)    BIT_ADDR(GPIOF_IDR_Addr,n)  //输入 Input
+
+#define PGout(n)   BIT_ADDR(GPIOG_ODR_Addr,n)  //输出 Output
+#define PGin(n)    BIT_ADDR(GPIOG_IDR_Addr,n)  //输入 Input
+
+#endif
+
+
+==================================================
+
+文件名: stm32f10x_conf.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\stm32f10x_conf.h
+文件内容:
+/**
+  ******************************************************************************
+  * @file    GPIO/IOToggle/stm32f10x_conf.h 
+  * @author  MCD Application Team
+  * @version V3.5.0
+  * @date    08-April-2011
+  * @brief   Library configuration file.
+  ******************************************************************************
+  * @attention
+  *
+  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+  *
+  * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
+  ******************************************************************************
+  */
+
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __STM32F10x_CONF_H
+#define __STM32F10x_CONF_H
+
+/* Includes ------------------------------------------------------------------*/
+/* Uncomment/Comment the line below to enable/disable peripheral header file inclusion */
+#include "stm32f10x_adc.h"
+#include "stm32f10x_bkp.h"
+#include "stm32f10x_can.h"
+#include "stm32f10x_cec.h"
+#include "stm32f10x_crc.h"
+#include "stm32f10x_dac.h"
+#include "stm32f10x_dbgmcu.h"
+#include "stm32f10x_dma.h"
+#include "stm32f10x_exti.h"
+#include "stm32f10x_flash.h"
+#include "stm32f10x_fsmc.h"
+#include "stm32f10x_gpio.h"
+#include "stm32f10x_i2c.h"
+#include "stm32f10x_iwdg.h"
+#include "stm32f10x_pwr.h"
+#include "stm32f10x_rcc.h"
+#include "stm32f10x_rtc.h"
+#include "stm32f10x_sdio.h"
+#include "stm32f10x_spi.h"
+#include "stm32f10x_tim.h"
+#include "stm32f10x_usart.h"
+#include "stm32f10x_wwdg.h"
+#include "misc.h" /* High level functions for NVIC and SysTick (add-on to CMSIS functions) */
+
+/* Exported types ------------------------------------------------------------*/
+/* Exported constants --------------------------------------------------------*/
+/* Uncomment the line below to expanse the "assert_param" macro in the 
+   Standard Peripheral Library drivers code */
+/* #define USE_FULL_ASSERT    1 */
+
+/* Exported macro ------------------------------------------------------------*/
+#ifdef  USE_FULL_ASSERT
+
+/**
+  * @brief  The assert_param macro is used for function's parameters check.
+  * @param  expr: If expr is false, it calls assert_failed function which reports 
+  *         the name of the source file and the source line number of the call 
+  *         that failed. If expr is true, it returns no value.
+  * @retval None
+  */
+  #define assert_param(expr) ((expr) ? (void)0 : assert_failed((uint8_t *)__FILE__, __LINE__))
+/* Exported functions ------------------------------------------------------- */
+  void assert_failed(uint8_t* file, uint32_t line);
+#else
+  #define assert_param(expr) ((void)0)
+#endif /* USE_FULL_ASSERT */
+
+#endif /* __STM32F10x_CONF_H */
+
+/******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
+
+==================================================
+
+文件名: stm32f10x_it.c
+文件路径: C:\ros2_car\CarMove_IIC\USER\stm32f10x_it.c
+文件内容:
+/**
+  ******************************************************************************
+  * @file    GPIO/IOToggle/stm32f10x_it.c 
+  * @author  MCD Application Team
+  * @version V3.5.0
+  * @date    08-April-2011
+  * @brief   Main Interrupt Service Routines.
+  *          This file provides template for all exceptions handler and peripherals
+  *          interrupt service routine.
+  ******************************************************************************
+  * @attention
+  *
+  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+  *
+  * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
+  ******************************************************************************
+  */
+
+/* Includes ------------------------------------------------------------------*/
+#include "stm32f10x_it.h" 
+
+
+ 
+void NMI_Handler(void)
+{
+}
+ 
+void HardFault_Handler(void)
+{
+  /* Go to infinite loop when Hard Fault exception occurs */
+  while (1)
+  {
+  }
+}
+ 
+void MemManage_Handler(void)
+{
+  /* Go to infinite loop when Memory Manage exception occurs */
+  while (1)
+  {
+  }
+}
+
+ 
+void BusFault_Handler(void)
+{
+  /* Go to infinite loop when Bus Fault exception occurs */
+  while (1)
+  {
+  }
+}
+ 
+void UsageFault_Handler(void)
+{
+  /* Go to infinite loop when Usage Fault exception occurs */
+  while (1)
+  {
+  }
+}
+ 
+void SVC_Handler(void)
+{
+}
+ 
+void DebugMon_Handler(void)
+{
+}
+ 
+void PendSV_Handler(void)
+{
+}
+ 
+void SysTick_Handler(void)
+{
+}
+
+/******************************************************************************/
+/*                 STM32F10x Peripherals Interrupt Handlers                   */
+/*  Add here the Interrupt Handler for the used peripheral(s) (PPP), for the  */
+/*  available peripheral interrupt handler's name please refer to the startup */
+/*  file (startup_stm32f10x_xx.s).                                            */
+/******************************************************************************/
+
+==================================================
+
+文件名: stm32f10x_it.h
+文件路径: C:\ros2_car\CarMove_IIC\USER\stm32f10x_it.h
+文件内容:
+/**
+  ******************************************************************************
+  * @file    GPIO/IOToggle/stm32f10x_it.h 
+  * @author  MCD Application Team
+  * @version V3.5.0
+  * @date    08-April-2011
+  * @brief   This file contains the headers of the interrupt handlers.
+  ******************************************************************************
+  * @attention
+  *
+  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+  *
+  * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
+  ******************************************************************************
+  */
+
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __STM32F10x_IT_H
+#define __STM32F10x_IT_H
+
+/* Includes ------------------------------------------------------------------*/
+#include "stm32f10x.h"
+
+/* Exported types ------------------------------------------------------------*/
+/* Exported constants --------------------------------------------------------*/
+/* Exported macro ------------------------------------------------------------*/
+/* Exported functions ------------------------------------------------------- */
+
+void NMI_Handler(void);
+void HardFault_Handler(void);
+void MemManage_Handler(void);
+void BusFault_Handler(void);
+void UsageFault_Handler(void);
+void SVC_Handler(void);
+void DebugMon_Handler(void);
+void PendSV_Handler(void);
+void SysTick_Handler(void);
+
+#endif /* __STM32F10x_IT_H */
+
+/******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
+
+==================================================
+
