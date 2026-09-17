@@ -122,7 +122,7 @@ if (!is_moving_cmd) {
 sequenceDiagram
     participant ROS as ROS 2 上位机
     participant MCU as STM32
-    ROS->>MCU: T<timestamp>  时间同步
+    ROS->>MCU: T + 毫秒时间戳  时间同步
     MCU-->>ROS: 时间同步完成 (偏移量)
     loop 每 20ms
         MCU-->>ROS: /four_wheel_encoder,...
